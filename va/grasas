@@ -1,0 +1,28 @@
+/// Create A Class Object from JNI
+
+	jclass activityClass = (*env)->FindClass(env, "android/app/NativeActivity");
+	jmethodID getClassLoader = (*env)->GetMethodID(env, activityClass,
+			"getClassLoader", "()Ljava/lang/ClassLoader;");
+	jobject cls = (*env)->CallObjectMethod(env, app->activity->clazz,
+			getClassLoader);
+	jclass classLoader = (*env)->FindClass(env, "java/lang/ClassLoader");
+	jmethodID findClass = (*env)->GetMethodID(env, classLoader, "loadClass",
+			"(Ljava/lang/String;)Ljava/lang/Class;");
+	jmethodID contextMethod = (*env)->GetMethodID(env, activityClass,
+			"getApplicationContext", "()Landroid/content/Context;");
+	jobject contextObj = (*env)->CallObjectMethod(env, app->activity->clazz,
+			contextMethod);
+
+	jstring strClassName = (*env)->NewStringUTF(env,
+			"me/rocks/grainstorm/Grainstorm");
+
+	 jclass grain = (jclass) (*env)->CallObjectMethod(env, cls, findClass, strClassName);
+
+	LOGE("FINCLASS: %p", grain);
+
+
+    jmethodID dataConstructor =
+          (*env)->GetMethodID(env, grain, "<init>", "()V");
+	LOGE("0 %d", dataConstructor);
+
+    jobject tempgrain = (*env)->NewObject(env, grain, dataConstructor);

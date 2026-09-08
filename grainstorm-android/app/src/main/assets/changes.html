@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grainstorm Changes</title>
+  <link href="bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="txtstyle.css">
+  <link rel="stylesheet" href="gallery.css">
+</head>
+
+<body class="content">
+  <div class="container">
+        <p><img src="Icon_512x512.webp" alt="Logo" height="auto" class="logo"></p>
+      <p>v1.9.1</p>
+      <ul>
+          <li>Syncing to BPM.</li>
+          <li>Crash fixed when saving microphone recordings into file.</li>
+      </ul>
+      <p>v1.9.0</p>
+<ul>
+<li>Smaller grainsizes possible (1ms). Previously, the limit was 5ms.</li>
+<li>Both grain envelopes, ENV1 and ENV2, are now applied to the grains.</li>
+<li>New parameter: ENV PHASE.</li>
+<li>New parameter: GLISS.</li>
+<li>Optional higher-quality pitch manipulation of the grains.</li>
+<li>New section: GRAIN GENERATION.</li>
+<li>Grain Arpeggiator.</li>
+<li>New cross-synthesis algorithm: LPC.</li>
+<li>Tape Mode: Less computational overhead with enhanced sound quality.</li>
+<li>Revised Envelope Followers.</li>
+<li>Editing options for audio on track.</li>
+<li>Recording directly to a track.</li>
+<li>Saving and restoring of loop positions.</li>
+<li>Upgrade: Save audio along with preset so that everything is in a single file.</li>
+</ul>
+<p>v1.8.0</p>
+<ul>
+<li>Bugfixes, numerical issues causing null sound at extreme settings seem to be resolved.</li>
+<li>Smoother effect activation/deactivation.</li>
+<li>For performance reasons some switches (like track/effect activation/deactivation) now only have an effect if the synth is powered on. This way the synth could be made completely lockless, reducing xruns.</li>
+<li>Minor UI changes/improvements like smoother scrolling of lists.</li>
+<li>New granulation parameter REVERSE. If set to 0.0 no reversed grains are generated, at 1.0 all grains are reversed, otherwise normal and reversed grains are generated randomly. If set to 0.5 the ratio of probability for normal and reversed grains is 1:1.</li>
+<li>New phase vocoder algorithm SPECTRAL WARP, which maps one part of the spectrum to another part. Can be LFO modulated.</li>
+<li>The LFOs now can have muliple targets, which can be activated/deactivated by clicking the new power button next to the LFO target selector.</li>
+<li>New LFO target LOOP POS. Targets the whole loop.</li>
+<li>Four slots for saving/restoring the state of the sequencer. On load the new state is queued until the current sequence finishes its last note.</li>
+<li>Upgrade: MODAL as mono effect.</li>
+<li>Upgrade: 3-band linear phase mono compressor.</li>
+<li>Upgrade: Dynamic implementation of EQ5.</li>
+<li>Upgrade: Saving/Restoring the whole project, all four tracks.</li>
+<li>Upgrade: Limiter: Corrected release time.</li>
+</ul>
+<p>v1.7.4</p>
+<ul>
+<li>Bugfixes</li>
+<li>App now starts with power on (can be turned off from settings) and optionally runs as Foreground Service.</li>
+<li>Upgrade: Stereo Soft Limiter</li>
+</ul>
+<p>v1.7.3</p>
+<ul>
+<li>WSOLA Waveform Similarity Overlap-Add. Another granular synthesis based time-stretching approach.</li>
+</ul>
+<p>v1.7.2</p>
+<ul>
+<li>Bugfixes, Revisions</li>
+<li>Improved Performance</li>
+<li>Faster UI Rendering</li>
+<li>Minor UI Changes</li>
+</ul>
+<p>v1.7.1</p>
+<ul>
+<li>MIDI should now work on any Android version.</li>
+<li>If not otherwise assigned MIDI Note On messages are routed to PITCH with middle C (MIDI note number 60)
+    as reference point.</li>
+<li>Changed triggering of grains. DEVIATION replaces RNDWRITE parameter. </li>
+<li>PANNING parameter. Can be LFO modulated.</li>
+<li>GRANULATION2/3: Simple Grain Sequencer. Note: Use the slider at the bottom of Granulation3 to scroll the screen.</li>
+<li>Upgrade: Revised VCOs. Fixed phase drifting and clicks for certain waveforms.</li>
+</ul>
+</div>
+</body>
+</html>

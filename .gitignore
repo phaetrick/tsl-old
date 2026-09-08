@@ -1,0 +1,35 @@
+# Build outputs
+build/
+build-*/
+cmake-build-*/
+CMakeFiles/
+out/
+*.a
+*.o
+*.so
+*.lib
+*.dylib
+*.app/
+*.appex/
+*.xcresult/
+*.log
+
+# Android
+.gradle/
+.cxx/
+local.properties
+*.apk
+*.aab
+
+# IDE
+.idea/
+.vs/
+*.iml
+xcuserdata/
+
+# OS
+.DS_Store
+
+# Ninja
+.ninja_deps
+.ninja_log

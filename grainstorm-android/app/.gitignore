@@ -1,0 +1,4 @@
+# content of .gitignore
+.cxx
+build
+release

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    tools:context=".InAppPurchases">
+    <TextView
+        android:id="@+id/titleTextView"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:gravity="center"
+        android:text="@string/titleiap"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:layout_weight = "0"
+        android:textColor="@color/white"
+         android:background="@color/blackblack"/>
+    <View style="@style/Seperator" />
+    <WebView
+        android:id="@+id/iabwebview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"/>
+    <View style="@style/Seperator" />
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:orientation="horizontal"
+        android:layout_weight = "0"
+        android:gravity="center"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        android:background="@color/blackblack">
+        <TextView
+            android:id="@+id/priceView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@+id/purchaseButton"
+            android:layout_centerInParent="true"
+            android:gravity="center|start"
+            android:textIsSelectable="true"
+            android:textColor="@color/white"
+            android:paddingStart="48dp"
+            android:paddingEnd="48dp"
+            android:background="@color/blackblack"/>
+        <Button
+            android:id="@+id/purchaseButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onClick"
+            android:layout_alignParentStart="true"
+            android:layout_centerInParent="true"
+            android:text="Purchase"/>
+    </RelativeLayout>
+</LinearLayout>
+

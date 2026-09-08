@@ -1,0 +1,297 @@
+
+<div class="doc">
+
+  <header class="masthead">
+    <div class="eyebrow">Architecture decisions</div>
+    <h1>Grainstorm&nbsp;2</h1>
+    <p class="lede">The spine stays: four tracks, waveform into granulation into effects. What opens up is the effects section — one unified list, any wiring, any number of instances — feeding a global mixer, behind a rebuilt UI.</p>
+    <div class="meta">
+      <span><b>20 August 2026</b></span>
+      <span>Decisions &amp; rationale</span>
+      <span>Nothing built yet</span>
+      <span>Revised from a fully-modular draft</span>
+    </div>
+  </header>
+
+  <section class="decision">
+    <div class="rail">
+      <div class="rail-id">D1</div>
+      <div class="chip chip--ok">Settled</div>
+    </div>
+    <div class="body">
+      <h2>Fixed spine, modular effects</h2>
+      <p class="call">Four tracks, each waveform → granulation → effects → out, then a global mixer. The <code>+</code> applies to the effects section only: any effect can wire to any other, in any number of instances.</p>
+
+      <figure>
+        <div class="figbox">
+          <svg viewBox="0 0 600 210" width="600" height="210" role="img" aria-label="Each of four tracks runs waveform into granulation into a free effects graph; the four track outputs feed a global mixer and then the master out.">
+            <g fill="none" stroke="var(--rule-soft)" stroke-width="1.5">
+              <rect x="26" y="52" width="366" height="46" rx="2"/>
+              <rect x="20" y="58" width="366" height="46" rx="2"/>
+            </g>
+            <rect x="14" y="64" width="366" height="46" rx="2" fill="var(--surface)" stroke="var(--rule)" stroke-width="1.5"/>
+            <g font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--ink-2)" text-anchor="middle">
+              <rect x="24"  y="74" width="88"  height="26" rx="2" fill="none" stroke="var(--rule)"/>
+              <text x="68"  y="91">WAVEFORM</text>
+              <rect x="124" y="74" width="120" height="26" rx="2" fill="none" stroke="var(--rule)"/>
+              <text x="184" y="91">GRANULATION</text>
+              <rect x="256" y="74" width="114" height="26" rx="2" fill="none" stroke="var(--accent)" stroke-dasharray="4 3"/>
+              <text x="313" y="91" fill="var(--accent)">FX GRAPH</text>
+            </g>
+            <g stroke="var(--ink-3)" stroke-width="1.2" fill="none">
+              <path d="M114 87 L122 87"/><path d="M246 87 L254 87"/>
+              <path d="M384 87 L410 87"/><path d="M504 87 L518 87"/>
+              <path d="M406 83 L410 87 L406 91"/><path d="M514 83 L518 87 L514 91"/>
+            </g>
+            <rect x="416" y="64" width="84" height="46" rx="2" fill="var(--surface)" stroke="var(--rule)" stroke-width="1.5"/>
+            <rect x="524" y="64" width="62" height="46" rx="2" fill="var(--surface)" stroke="var(--rule)" stroke-width="1.5"/>
+            <g font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--ink-2)" text-anchor="middle">
+              <text x="458" y="91">MIXER</text>
+              <text x="555" y="91">OUT</text>
+            </g>
+            <g font-family="IBM Plex Mono, monospace" font-size="9.5" text-anchor="start">
+              <text x="14" y="42" fill="var(--ink-3)">× 4 TRACKS</text>
+              <text x="256" y="128" fill="var(--accent)">+  any wiring, any count</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>Only the dashed box is modular. Everything around it is fixed, which is what keeps the preset format, the mixer and the performance UI knowable.</figcaption>
+      </figure>
+
+      <p>This replaces an earlier draft that dissolved the spine entirely and made everything a module. That version bought maximum flexibility at the price of the hard version of every problem at once — global cycle detection, per-sample feedback, latency compensation across arbitrary paths, and no natural default connection for a new module. It also stopped being Grainstorm.</p>
+
+      <p>Confining the graph to the effects section is where the flexibility actually pays. A granular voice does not want arbitrary topology; its shape <em>is</em> the instrument. An effects rack does — that is exactly where "two of these in parallel, then into that" is a musical idea rather than a novelty. Everything upstream keeps a known shape, so the preset format, the mixer and the four-button performance UI stay simple.</p>
+
+      <h3>What this costs</h3>
+      <p>Two things stop being free the moment the chain becomes a graph. Processing order has to be resolved rather than assumed — a topological sort, rebuilt off the audio thread and handed over as one atomic pointer swap, with the audio thread never allocating or sorting. And latency compensation becomes real: two parallel paths of unequal length must be aligned, which a linear chain never had to do.</p>
+    </div>
+  </section>
+
+  <section class="decision">
+    <div class="rail">
+      <div class="rail-id">D2</div>
+      <div class="chip chip--ok">Settled</div>
+    </div>
+    <div class="body">
+      <h2>One effect list. Stereo is a contract, not a category</h2>
+      <p class="call">MONO FX and STEREO FX merge into a single list. Each effect declares how it handles channels, and the wrapper honours that — the user never sees the distinction.</p>
+
+      <p>Today there are three ordered chains — <code>grainFX</code>, <code>monoFX</code>, <code>stereoFX</code> — and the split is visible in the UI as three headed sections. It is an implementation detail wearing a category's clothes: nobody reaching for a chorus is thinking "this is the stereo kind".</p>
+
+      <p>The distinction that actually matters is <strong>not channel count — it is whether the control signal must be linked across channels.</strong> That is the whole reason the naive "just make everything stereo" fails, and it sorts every effect into three honest kinds:</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Contract</th><th>Meaning</th><th>Examples</th></tr></thead>
+          <tbody>
+            <tr><td>Per-channel</td><td>Run an independent instance per channel. Nothing is shared.</td><td>Distortion, saturator, filter, EQ</td></tr>
+            <tr><td>Linked</td><td>Process per channel, but share one control signal, or the image wanders.</td><td>Compressor, gate, envelope follower, ducker</td></tr>
+            <tr><td>Native stereo</td><td>Inherently two-in two-out; cannot be decomposed.</td><td>Chorus, widener, M/S tools, ping-pong delay</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>A compressor built as two independent per-channel instances will pull the image around on every transient that hits one side harder. That is the bug this table exists to prevent, and it is the reason "Linked" is worth being its own contract rather than folding it into per-channel.</p>
+
+      <h3>Watch the CPU, and carry the channel count</h3>
+      <p>A mono effect that used to run once on a summed signal costs twice as much the moment it runs per channel — and with unlimited instances that multiplies rather than adds. So <strong>track the channel count through the graph rather than forcing stereo everywhere</strong>: a signal stays mono until something genuinely widens it, and per-channel effects upstream of that point run once. The FX graph knows each connection's channel count, and only pays for two when there are two.</p>
+    </div>
+  </section>
+
+  <section class="decision">
+    <div class="rail">
+      <div class="rail-id">D3</div>
+      <div class="chip chip--ok">Settled</div>
+    </div>
+    <div class="body">
+      <h2>Parameter identity — and it is now the gate, not a detail</h2>
+      <p class="call">A parameter's address is <em>effect instance UUID + parameter index</em>. Host automation is a fixed pool of generic slots, mapped to instances, with the mapping saved in the project.</p>
+
+      <p>In the earlier draft this was the decision that could not be changed later. Under this design it is stronger than that: <strong>"unlimited instances of each effect" is not merely awkward in the current model, it is impossible.</strong></p>
+
+      <p>Parameters today live in a flat array indexed <code>params[track][id]</code>, where <code>id</code> comes from a compile-time enum. There is exactly one slot per effect parameter per track, so the data model permits exactly one chorus per track. Two choruses have nowhere to put the second one's rate. No amount of UI work gets around that — the array has to go first.</p>
+
+      <p>The complication is that AU and VST cannot cope with a parameter list that changes shape while the plugin is loaded, and instances now come and go at runtime. So the two concerns separate: the patch addresses parameters by instance UUID, and the host sees a fixed pool of generic automation slots that the user assigns, with the assignment saved alongside the patch.</p>
+
+      <h3>Consequences to accept deliberately</h3>
+      <ul>
+        <li>The preset becomes a <strong>document</strong> — instances, their parameters, their connections — not an array. It survives adding an effect type without a migration.</li>
+        <li>Undo records <em>addressed</em> edits, so it survives an instance being deleted and re-added.</li>
+        <li>The pool size is frozen forever once shipped, because it is part of the plugin's host-visible identity. The mixer and a graph full of instances both want automation, so pick it against a real target and be generous.</li>
+        <li>Existing presets need a migration path: the current bank maps cleanly, since one-instance-per-effect is a valid special case of the new model.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="decision">
+    <div class="rail">
+      <div class="rail-id">D4</div>
+      <div class="chip chip--ok">Settled</div>
+    </div>
+    <div class="body">
+      <h2>Skia stays — and the compositor is Skia too</h2>
+      <p class="call">Keep Skia for everything drawn. Take 3D and shader effects from Skia's own transform, mesh and SkSL APIs rather than from raw GL. No Vulkan backend.</p>
+
+      <p>The texture-compositing instinct behind "nice remade UI with 3D effects" is right; reaching for GL to get there is the part to avoid, and there is evidence for that in the current tree.</p>
+
+      <p><code>window_anim.cpp</code> is roughly 2,400 lines of hand-written GL animation. Every shader in it is <code>#version 300 es</code>, and it is compiled only inside the Android branch of the build — one platform out of five. Mac and iOS are Metal, desktop is GL3 core, and none of that code can run on either. That is the tax on a raw-GL feature: it does not travel.</p>
+
+      <p>The second cost is subtler. Mixing raw GL with Skia invalidates Skia's hardware-state cache, which is what produced the double-applied alpha after a rotation — Skia believed it had already set the blend function, skipped it, and inherited the factor the raw GL path left behind. It only reproduced after a rotation, because a fresh context starts with an invalidated cache.</p>
+
+      <h3>What replaces the raw GL</h3>
+      <ul>
+        <li><strong>Perspective and 3D</strong> — <code>SkCanvas::concat(const SkM44&amp;)</code>. A real 4×4 with perspective on any canvas.</li>
+        <li><strong>Arbitrary textured geometry</strong> — <code>drawVertices</code> and <code>drawMesh</code>, with buffers from <code>SkMeshGanesh</code>.</li>
+        <li><strong>Effects</strong> — <code>SkRuntimeEffect</code> in SkSL, compiled per backend, so one shader source covers GL, Metal and Vulkan.</li>
+      </ul>
+      <p>All of these are present in the vendored Skia — verified in the headers rather than assumed. Raw GL stays available for the rare thing Skia cannot express, bracketed by a flush and a full <code>resetContext</code>, as the exception rather than the normal path. Skia's next backend is Graphite; code that stays inside Skia and speaks SkSL ports to it for free, code that reaches into <code>GrGLTextureInfo</code> does not.</p>
+    </div>
+  </section>
+
+  <section class="decision">
+    <div class="rail">
+      <div class="rail-id">D5</div>
+      <div class="chip chip--ok">Settled</div>
+    </div>
+    <div class="body">
+      <h2>Layered offscreen rendering</h2>
+      <p class="call">One offscreen surface per independently-changing thing. The root canvas draws those layers, under whatever transform the view wants.</p>
+
+      <figure>
+        <div class="figbox">
+          <svg viewBox="0 0 560 250" width="560" height="250" role="img" aria-label="Three offscreen layers — cables, effect nodes, background grid — snapshotted and composited onto the root canvas under a 4x4 transform.">
+            <g fill="none" stroke="var(--rule)" stroke-width="1.5">
+              <rect x="24" y="150" width="180" height="62" transform="skewY(-12)" fill="var(--surface)"/>
+              <rect x="24" y="98"  width="180" height="62" transform="skewY(-12)" fill="var(--surface)"/>
+              <rect x="24" y="46"  width="180" height="62" transform="skewY(-12)" fill="var(--surface)"/>
+            </g>
+            <g font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-2)">
+              <text x="38" y="169" transform="skewY(-12)">background grid</text>
+              <text x="38" y="117" transform="skewY(-12)">effect nodes</text>
+              <text x="38" y="65"  transform="skewY(-12)">cables</text>
+            </g>
+            <g stroke="var(--accent)" stroke-width="1.5" fill="none">
+              <path d="M232 120 L302 120"/>
+              <path d="M295 114 L302 120 L295 126"/>
+            </g>
+            <text x="267" y="108" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--accent)">SkM44</text>
+            <rect x="330" y="58" width="196" height="124" rx="2" fill="var(--surface)" stroke="var(--ink-3)" stroke-width="1.5"/>
+            <text x="428" y="125" text-anchor="middle" font-family="Archivo, sans-serif" font-size="13" font-weight="600" fill="var(--ink)">root canvas</text>
+            <text x="428" y="204" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">one flush, one swap</text>
+          </svg>
+        </div>
+        <figcaption>Each layer repaints only when its own state changes. The transform is applied at composite time, so panning, zooming and page transitions never touch layer contents.</figcaption>
+      </figure>
+
+      <p>Layer at the boundary of <em>things that change independently</em> — a surface per effect node, one for the cable bundle, one for the background. Not per widget: a surface per knob costs more than it saves, because every layer is an allocation, a resolve and a blit.</p>
+
+      <p>Worth being blunt about the performance claim. Compositing textures is <strong>not</strong> inherently faster — Skia already batches its drawing into GPU work. The entire win is <em>not redrawing static content</em> while one knob is being dragged. Optimising the composite rather than the redraw avoidance would be optimising the wrong half.</p>
+
+      <p>This design makes it easier than the fully-modular draft would have: an effects graph is perhaps ten to thirty nodes, not a whole instrument, so the surface count stays small enough that video memory and zoom re-rendering are manageable rather than load-bearing problems.</p>
+    </div>
+  </section>
+
+  <section class="decision">
+    <div class="rail">
+      <div class="rail-id">D6</div>
+      <div class="chip chip--ok">Settled</div>
+    </div>
+    <div class="body">
+      <h2>Two views over the effects graph</h2>
+      <p class="call">The graph model knows nothing about pixels. A node canvas on desktop and tablet, a list of effect strips on phone — same patch, same file, either one editable.</p>
+
+      <p>The rule that enforces it: an effect owns how it <em>draws itself</em>, never where it sits. Position is view state — it belongs to the canvas view, is saved alongside the patch rather than inside it, and the list view has no opinion about it.</p>
+
+      <p>The list view has one hard requirement: a vertical rack implies signal flows downward, and the moment there is a split, a parallel pair or a feedback path, that implication is false. So each strip shows its actual inputs and outputs and what they are patched to. It is a list <em>of effects</em>, not a chain.</p>
+
+      <p>Patching is two taps — tap an output, tap an input. Not a touch compromise: it works identically with a mouse and removes the worst interaction in any node editor, dragging a bezier onto a twelve-pixel port. Cables become something you look at rather than something you fight.</p>
+
+      <p>This is far more tractable than it was when the whole instrument was a graph. The effects section is bounded, so the phone list is a genuine editor rather than a compromise.</p>
+    </div>
+  </section>
+
+  <section class="decision">
+    <div class="rail">
+      <div class="rail-id">D7</div>
+      <div class="chip chip--ok">Settled</div>
+    </div>
+    <div class="body">
+      <h2>The + button always leaves you hearing something</h2>
+      <p class="call">Plus, then an effect. It lands inserted after whatever is selected, or at the end of the track's chain if nothing is. Then you rewire.</p>
+
+      <p>Auto-connect matters more than the wiring UI. Add an effect, hear nothing, go hunting for how to patch it — that is where people put an app down, and it is the most common failure of modular interfaces. Adding something should always change what you hear.</p>
+
+      <p>With one unified list the picker is a flat, searchable list of every effect, which is only possible because D2 removed the mono/stereo split. Instance count is unlimited, so the list never greys anything out — "add a second chorus" is an ordinary action, not an error.</p>
+    </div>
+  </section>
+
+  <section class="decision">
+    <div class="rail">
+      <div class="rail-id">D8</div>
+      <div class="chip chip--open">Take the ideas</div>
+    </div>
+    <div class="body">
+      <h2>ui2: harvest the design, not the files</h2>
+      <p class="call">The parked toolkit in <code>graphics/src/ui2</code> has three ideas worth keeping and a body of code that has never compiled. Reimplement the ideas in the live toolkit; do not revive the directory.</p>
+
+      <p>It sits behind a <code>NEW_UI</code> flag nothing sets, one commit from 2026-05-31. Audited in full: every include path is wrong (<code>ui/…</code> against a directory named <code>ui2/</code>), <code>ButtonBase2.cpp</code> uses a <code>Param::callback</code> member that no longer exists, <code>Button::getEffectiveBgColor</code> is declared and never defined, and both list widgets were written against the <em>old</em> View API and never compiled at all. Input is unimplemented — <code>enqueueInput()</code> is an empty body and nothing walks its queue — so no ui2 widget can receive a touch. It also has no virtual destructor and no ownership of its children.</p>
+
+      <h3>Worth taking</h3>
+      <ul>
+        <li><strong>The Style object.</strong> Injected fonts, colours and <code>dp()</code> in one place, instead of the globals the live toolkit reads today. This is the best idea in there.</li>
+        <li><strong>Flags-based sizing.</strong> <code>FILL_*</code> / <code>WRAP_*</code> / <code>SYM_*</code> / <code>FRACTION_*</code> declared per view, read once at layout — far clearer than the current ScaleFactor-plus-mode-enum scheme.</li>
+        <li><strong>One axis-parameterised layout</strong> with Start/Center/End alignment groups, replacing two hand-written near-duplicates.</li>
+      </ul>
+
+      <h3>Fix on the way through</h3>
+      <ul>
+        <li><code>WRAP_WIDTH</code> and <code>WRAP_HEIGHT</code> — the <em>default</em> flags — have no branch in <code>desiredWidth()</code>/<code>desiredHeight()</code> and silently behave as fixed. Implement every flag the enum declares.</li>
+        <li><code>Style::standardButtonHeight()</code> returns a raw <code>36</code> with no <code>dp()</code>, so every button would be 36 physical pixels — a sliver on a phone. The dp discipline has to be total or it is worse than none.</li>
+        <li>Pick one axis convention and keep it. ui2's <code>LayoutVertical</code> <em>stacks</em> children; the live toolkit's <code>initVertical</code> lays them out side by side. They are opposites, and mixing them is a guaranteed afternoon.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Build order</h2>
+    <div class="body">
+      <ol class="steps">
+        <li><span class="n">01</span><span><strong>Parameter identity and the preset document.</strong> First, because unlimited instances is impossible until the flat array is gone, and because it constrains the preset format, undo and automation. Round-trip a patch to disk and prove an added effect type does not invalidate old files.</span></li>
+        <li><span class="n">02</span><span><strong>The FX graph, headless.</strong> Instances, ports, connections, channel-count propagation, topological ordering, latency compensation, off-thread rebuild with atomic handover. Driven by a test harness that asserts the audio thread never allocates.</span></li>
+        <li><span class="n">03</span><span><strong>Unify the effect list behind the channel contract.</strong> Tag every existing effect per-channel / linked / native stereo, and make the wrapper honour it. Mostly classification work, and it is where the CPU regressions would hide.</span></li>
+        <li><span class="n">04</span><span><strong>The list view, plus the global mixer.</strong> Cheapest view, works on every screen size, and it becomes the reference implementation of "a view over the graph".</span></li>
+        <li><span class="n">05</span><span><strong>Layered rendering and the canvas view.</strong> With two views live, the model/view split is tested rather than assumed — and this is where the 3D lands.</span></li>
+      </ol>
+      <p>Granulation, the generators and grain FX are deliberately untouched by all five. They keep working as they do now, which is the whole point of keeping the spine.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Open questions</h2>
+    <div class="body">
+      <p>The parts I would expect to be argued with, rather than the parts I am confident about.</p>
+
+      <div class="q">
+        <b>Does the mixer have sends?</b>
+        <p>Four tracks each with their own effects graph cannot share one reverb, which is the classic reason to want a send. The mixer is the natural home for it, and it keeps the per-track graphs independent — which is also what lets them run on separate threads. Without sends, a shared reverb means four instances and four times the CPU.</p>
+      </div>
+      <div class="q">
+        <b>Does the master get a graph too?</b>
+        <p>"Then to out and a global mixing section" implies master effects. Same machinery, one instance — but it decides whether the graph code is per-track or a general thing instantiated five times.</p>
+      </div>
+      <div class="q">
+        <b>Is feedback allowed inside the FX graph?</b>
+        <p>A free graph invites it, and it is musically useful. The honest price is one block of delay on the edge that closes the cycle, shown on that cable rather than hidden. The alternative — true per-sample feedback — forces single-sample processing and destroys the block-based SIMD everything else depends on.</p>
+      </div>
+      <div class="q">
+        <b>Do grain FX join the list, or stay inside granulation?</b>
+        <p>They are the third chain today and they operate on grains, not on a stream — they cannot simply be patched alongside a chorus. Keeping them where they are is the honest answer, but it means the UI still has two effect concepts and D2's "one list" is only mostly true.</p>
+      </div>
+      <div class="q">
+        <b>How many automation slots?</b>
+        <p>Frozen forever once shipped. A graph full of instances plus a mixer wants more than the current model ever needed, so decide it against a real target rather than a round number.</p>
+      </div>
+    </div>
+  </section>
+
+</div>

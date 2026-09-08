@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tracksettingsroot"
+   style="@style/dialogParentStyle">
+
+    <TextView
+        android:id="@+id/title"
+        style="@style/SettingsTextviewTitle"
+        android:title="TRACK 1" />
+    <TextView
+        android:id="@+id/showfx"
+        style="@style/SettingsTextview"
+        android:gravity="start"
+        android:text="ACTIVE EFFECTS" />
+    <TextView
+        android:id="@+id/routing"
+        style="@style/SettingsTextview"
+        android:gravity="start"
+        android:text="INPUT ROUTING" />
+
+    <TextView
+        android:id="@+id/controls_track"
+        style="@style/SettingsTextview"
+        android:gravity="start"
+        android:text="SYNCING"/>
+
+    <TextView
+        android:id="@+id/presetload"
+        style="@style/SettingsTextview"
+        android:gravity="start"
+        android:text="IMPORT PRESET"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/presetsave"
+        style="@style/SettingsTextview"
+        android:gravity="start"
+        android:text="SAVE PRESET"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/midiload"
+        style="@style/SettingsTextview"
+        android:gravity="start"
+        android:text="IMPORT MIDI MAPPING"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/midisave"
+        style="@style/SettingsTextview"
+        android:gravity="start"
+        android:text="SAVE MIDI MAPPING"
+        android:visibility="gone" />
+</LinearLayout>

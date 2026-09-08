@@ -1,0 +1,409 @@
+delay.cpp:165:    bool lfo_on = lfo && lfo->power->load();
+delay.cpp:170:        func = lfo_funcs[(int) lfo->func->load()];
+delay.cpp:176:        lfophase = *lfo->phase;
+delay.cpp:562:    bool lfo_on = lfo && lfo->power->load();
+delay.cpp:568:        func = lfo_funcs[(int) lfo->func->load()];
+delay.cpp:574:        lfophase = lfo->phase->load();
+delay.cpp:885:    bool lfo_on = lfo != nullptr && lfo->power;
+delay.cpp:888:        func = lfo_funcs[(int) lfo->func->load()];
+delay.cpp:895:        lfophase = lfo->phase->load();
+delay.cpp:1224:    bool lfo_on = lfo && lfo->power->load();
+delay.cpp:1228:        func = lfo_funcs[(int) lfo->func->load()];
+delay.cpp:1235:        lfophase = lfo->phase->load();
+delay.cpp:1495:    bool lfo_on = lfo && lfo->power->load();
+delay.cpp:1498:        func = lfo_funcs[(int) lfo->func->load()];
+delay.cpp:1499:        if (!lfo->stopped->load() && !lfo->syncmidi.load())
+delay.cpp:1500:            inc = (float) (1.f / (float) _sr * powf(10, lfo->freq->load() * .05f));
+delay.cpp:1502:        dir = (int) lfo->dir->load();
+delay.cpp:1503:        phase = *lfo->phase;
+delay.cpp:1509:        lfophase = lfo->phase->load();
+effects.h:94:        bool lfo_on = lfo && lfo->power;
+effects.h:99:            dir = lfo->dir->load();
+effects.h:105:            lfophase = lfo->phase->load();
+effects.h:106:            func = lfo_funcs[(int) lfo->func->load()];
+MidiCallbacks.cpp:142:    uint16_t control_num = tsl::app::params[track->index][LFO1_DEST + lfo->index].load();
+gui.cpp:64:        lfo->editfunc.store(value);
+gui.cpp:65:        lfo->compute_env.store(true);
+gui.cpp:8382:    //selector_lfo->paddingright = 25.f;
+gui.cpp:8609:    space_lfo->addChild(distancelfotop);
+gui.cpp:8613:    space_lfo->addChild(distancelfobottom);
+gui.cpp:8617:    space_lfo->addChild(dummy_title_lfo);
+gui.cpp:8618:    dummy_title_lfo->size_reference = &p->track1.button->width;
+gui.cpp:8620:    dummy_title_lfo->paddingleft = 2.5;
+gui.cpp:8621:    dummy_title_lfo->paddingright = 2.5f;
+gui.cpp:8630:    selector_lfo->padding = 2.5f;
+gui.cpp:8631:    dummy_title_lfo->addChild(selector_lfo);
+gui.cpp:8638:    dummy_title_lfo->addChild(lfooffbutton);
+gui.cpp:8643:    dummy_title_lfo->addChild(pLfoEditorButton);
+gui.cpp:8649:    space_lfo->addChild(lfo_edit_root);
+gui.cpp:8658:    dummy_controls_edit_lfo->addChild(lfo_edit_nsegments);
+gui.cpp:8663:    dummy_controls_edit_lfo->addChild( dummy_controls_edit_lfo2);
+gui.cpp:8813://dummy_buttons_lfo->init_surface = SKIP_SURFACE;
+gui.cpp:8815:    dummy_buttons_lfo->size_reference = &p->track1.button->width;
+gui.cpp:8922:    dummy1lfo->overlap = OVERLAP;
+gui.cpp:8923:    //dummy1lfo->paddingtop = 5.f;
+gui.cpp:8924:    //dummy1lfo->paddingbottom = 5.f;
+gui.cpp:8925:    //dummy1lfo->paddingleft = 5.f;
+gui.cpp:8926:    //dummy1lfo->paddingright = 5.f;
+Midi.cpp:109:            if (!lfo->power->load() || lfo->stopped->load()) {
+Midi.cpp:114:                lfo->phase = 0;
+Midi.cpp:116:                double phase = *lfo->phase;
+Midi.cpp:117:                phase += MIDIINC * lfo->dir->load() * lfo->clockmulti;
+Midi.cpp:122:                *lfo->phase = phase;
+setup.cpp:894:        lfo->clockmulti = value;
+setup.cpp:906:        float *table = lfo->active_table.load();
+setup.cpp:908:            lfo->positions[i] = start;
+setup.cpp:909:            lfo->values[i] = table[(int) ((WINDOW_SIZE - 1) * start)];
+setup.cpp:912:        //if(lfo->joinends)
+setup.cpp:913:        ;//lfo->values[(int) value].store(lfo->values[0].load());
+setup.cpp:914:        lfo->segments = value;
+setup.cpp:915:        lfo->compute_env = true;
+button.cpp:760:            lfo->syncmidi.store(!lfo->syncmidi.load());
+button.cpp:761:            if (lfo->syncmidi.load())
+button.cpp:765:            if (lfo->syncmidi.load())
+button.cpp:767:                         lfo->name);
+button.cpp:769:                snprintf(string, 50, "External MIDICLOCK deactivated for %s.", lfo->name);
+button.cpp:816:                p->views.toppanellfo->delCB(false);
+button.cpp:830:                p->views.toppanellfo->delCB(false);
+button.cpp:831:                p->views.selector_lfo->setActiveByIndex(GASLFO, true);
+button.cpp:832:                p->views.selector_lfo->redraw(false);
+button.cpp:1151:    p->views.env_win_lfo->redraw();
+callback:1065:gui.cpp:9028:    dummy_title_lfo->size_reference = &p->track1.button->width;
+callback:1092:gui.cpp:9292:    dummy_buttons_lfo->size_reference = &p->track1.button->width;
+callback:1622:button.cpp:1050:                callback_lfo_switch((Selector *) p->views->selector_lfo->widget,
+callback:1721:button.cpp:1491:    Selector *sw = (Selector *) p->views->selector_lfo->widget;
+callback:1953:env_window.cpp:314:        p->lfoeditfunc[(int) lfo->editfunc.load()](tab, WINDOW_SIZE, &lfo->positions[0],
+callback:2248:callbacks_loop_controls.cpp:361:            if (lfo->power->load() && tsl::app::params[track->index][POWERTRACK].load() && track->p->player->IsPlaying(p->player))
+callback:2252:callbacks_loop_controls.cpp:387:            if (lfo->power->load() && tsl::app::params[track->index][POWERTRACK].load() && track->p->player->IsPlaying(p->player))
+callback:2932:ControlItem.cpp:498:            if (lfo->power->load() && tsl::app::params[track->index][POWERTRACK].load() && track->p->player->IsPlaying(p->player))
+callback:2933:ControlItem.cpp:509:            if (lfo->power->load() && tsl::app::params[track->index][POWERTRACK].load() && track->p->player->IsPlaying(p->player))
+vco.cpp:729:                    if (lfo && lfo->power->load()) {
+vco.cpp:734:                        float (*func)(LFO *, float, float) = lfo_funcs[(int) lfo->func->load()];
+vco.cpp:735:                        float pp = lfo->phase->load();
+track.cpp:5162:    lfo->env[0] = (float *) p.eq.get_by_name("SINE LFO");
+track.cpp:5163:    lfo->env[1] = (float *) p.eq.get_by_name("TRIANGLE");
+track.cpp:5164:    lfo->env[2] = (float *) p.eq.get_by_name("SAWTOOTH");
+track.cpp:5165:    lfo->env[3] = (float *) p.eq.get_by_name("RECTPULS");
+track.cpp:5166:    lfo->env[4] = lfo->active_table.load();
+track.cpp:5167:    lfo->compute_env.store(false);
+track.cpp:5168:    float *tab = lfo->active_table.load() == lfo->table[0] ? lfo->table[1] : lfo->table[0];
+track.cpp:5169:    p.lfoeditfunc[(int) lfo->editfunc.load()](tab, WINDOW_SIZE, &lfo->positions[0],
+track.cpp:5170:                                               &lfo->values[0], lfo->segments, true);
+track.cpp:5171:    lfo->active_table.store(tab);
+track.cpp:5172:    lfo->env[4] = tab;
+grainqueue.cpp:96:            if ((lfo = track->lfo[GRAINVCO1PW + i].load()) != nullptr && lfo->power->load()) {
+grainqueue.cpp:101:                _vcofuncs[i] = lfo_funcs[(int) lfo->func->load()];
+grainqueue.cpp:102:                float fr = LOG2NORMALF(lfo->freq->load());
+grainqueue.cpp:103:                _vcolfophase[i] = lfo->phase->load();
+grainqueue.cpp:104:                _vcopwinc[i] = (lfo->stopped->load() || lfo->syncmidi.load() ? 0 : fr *
+grainqueue.cpp:105:                                                                                   lfo->dir->load() /
+lfo.cpp:7:    return lfo->active_table.load()[PHS2INT(phase)] * range;
+lfo.cpp:13:    return lfo->env[0][PHS2INT(phase)] * range;
+lfo.cpp:36:    return lfo->env[1][PHS2INT(phase)] * range;
+delay.h:534:        bool lfo_on = lfo && lfo->power->load();
+delay.h:537:            func = lfo_funcs[(int) lfo->func->load()];
+delay.h:538:            if (!lfo->stopped->load() && !lfo->syncmidi.load())
+delay.h:539:                inc = (float) (1.f / (float) _sr * powf(10, lfo->freq->load() * .05f));
+delay.h:541:            dir = (int) lfo->dir->load();
+delay.h:542:            phase = *lfo->phase;
+delay.h:549:            lfophase = lfo->phase->load();
+pv.cpp:301:    if (lfo && lfo->power->load()) {
+pv.cpp:306:        k1 = start + lfo_funcs[(int) lfo->func->load()](lfo, lfo->phase->load(), range);
+random.cpp:264:    bool lfo_on = lfo && lfo->power->load();
+random.cpp:272:        func = lfo_funcs[(int) lfo->func->load()];
+random.cpp:276:        lfophase = lfo->phase->load();
+random.cpp:360:    bool lfo_on = lfo && lfo->power->load();
+random.cpp:368:        func = lfo_funcs[(int) lfo->func->load()];
+random.cpp:372:        lfophase = lfo->phase->load();
+callbacks_loop_controls.cpp:374:            lfo->phase->store(0.f);
+callbacks_loop_controls.cpp:375:            if (lfo->power->load() && tsl::app::params[track->index][POWERTRACK].load() &&
+callbacks_loop_controls.cpp:377:                lfo->phase_changed.store(true);
+callbacks_loop_controls.cpp:378:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index])
+callbacks_loop_controls.cpp:385:            tsl::app::params[track->index][LFO1_STOPPED + lfo->index].store(true);
+callbacks_loop_controls.cpp:386:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index])
+callbacks_loop_controls.cpp:393:            tsl::app::params[track->index][LFO1_STOPPED + lfo->index].store(false);
+callbacks_loop_controls.cpp:394:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index])
+callbacks_loop_controls.cpp:401:            *lfo->phase = 1.0;
+callbacks_loop_controls.cpp:402:            if (lfo->power->load() && tsl::app::params[track->index][POWERTRACK].load() &&
+callbacks_loop_controls.cpp:404:                lfo->phase_changed.store(true);
+callbacks_loop_controls.cpp:405:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index])
+callbacks_loop_controls.cpp:412:            lfo->dir->store(lfo->dir->load() * -1);
+callbacks_loop_controls.cpp:413:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index])
+callbacks_loop_controls.cpp:420:            val = LOG2NORMALF(lfo->freq->load()) *
+callbacks_loop_controls.cpp:423:                lfo->freq->store(LOG10D20F(val));
+callbacks_loop_controls.cpp:442:                if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index])
+callbacks_loop_controls.cpp:451:            val = LOG2NORMALF(lfo->freq->load()) /
+callbacks_loop_controls.cpp:454:                lfo->freq->store(LOG10D20F(val));
+callbacks_loop_controls.cpp:472:                if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index])
+synth.cpp:221:    if (lfo1_freq_lfo && lfo1_freq_lfo->power->load()) {
+synth.cpp:222:        lfo1_freq_lfo_func = lfo_funcs[(int) lfo1_freq_lfo->func->load()];
+synth.cpp:240:    if (lfo2_freq_lfo && lfo2_freq_lfo->power->load()) {
+synth.cpp:241:        lfo2_freq_lfo_func = lfo_funcs[(int) lfo2_freq_lfo->func->load()];
+synth.cpp:259:    if (lfo3_freq_lfo && lfo3_freq_lfo->power->load()) {
+synth.cpp:260:        lfo3_freq_lfo_func = lfo_funcs[(int) lfo3_freq_lfo->func->load()];
+synth.cpp:278:    if (grainamp_lfo && grainamp_lfo->power->load()) {
+synth.cpp:279:        grainamp_lfo_func = lfo_funcs[(int) grainamp_lfo->func->load()];
+synth.cpp:300:    if (speed_lfo && speed_lfo->power->load() && track == source) {
+synth.cpp:301:        speed_lfo_func = lfo_funcs[(int) speed_lfo->func->load()];
+synth.cpp:322:    if (awin_lfo && awin_lfo->power->load()) {
+synth.cpp:323:        awin_lfo_func = lfo_funcs[(int) awin_lfo->func->load()];
+synth.cpp:343:    if (readoffset_lfo && readoffset_lfo->power->load()) {
+synth.cpp:344:        readoffset_lfo_func = lfo_funcs[(int) readoffset_lfo->func->load()];
+synth.cpp:362:    if (rndread_lfo && rndread_lfo->power->load()) {
+synth.cpp:363:        rndread_lfo_func = lfo_funcs[(int) rndread_lfo->func->load()];
+synth.cpp:384:    if (pitch_lfo && pitch_lfo->power->load()) {
+synth.cpp:385:        pitch_lfo_func = lfo_funcs[(int) pitch_lfo->func->load()];
+synth.cpp:415:    if (pitch_min_lfo && pitch_min_lfo->power->load()) {
+synth.cpp:417:        pitch_min_lfo_func = lfo_funcs[(int) pitch_min_lfo->func->load()];
+synth.cpp:435:    if (pitch_max_lfo && pitch_max_lfo->power->load()) {
+synth.cpp:437:        pitch_max_lfo_func = lfo_funcs[(int) pitch_max_lfo->func->load()];
+synth.cpp:458:    if (semitones_lfo && semitones_lfo->power->load()) {
+synth.cpp:460:        semitones_lfo_func = lfo_funcs[(int) semitones_lfo->func->load()];
+synth.cpp:949:    if (lfo1_freq_lfo && lfo1_freq_lfo->power->load()) {
+synth.cpp:950:        lfo1_freq_lfo_func = lfo_funcs[(int) lfo1_freq_lfo->func->load()];
+synth.cpp:969:    if (lfo2_freq_lfo && lfo2_freq_lfo->power->load()) {
+synth.cpp:970:        lfo2_freq_lfo_func = lfo_funcs[(int) lfo2_freq_lfo->func->load()];
+synth.cpp:989:    if (lfo3_freq_lfo && lfo3_freq_lfo->power->load()) {
+synth.cpp:990:        lfo3_freq_lfo_func = lfo_funcs[(int) lfo3_freq_lfo->func->load()];
+synth.cpp:1010:    if (grainamp_lfo && grainamp_lfo->power->load()) {
+synth.cpp:1011:        grainamp_lfo_func = lfo_funcs[(int) grainamp_lfo->func->load()];
+synth.cpp:1034:    if (pan_lfo && pan_lfo->power->load()) {
+synth.cpp:1035:        pan_lfo_func = lfo_funcs[(int) pan_lfo->func->load()];
+synth.cpp:1047:        pan_lfo_phinc = LOG2NORMALF(pan_lfo->freq->load()) / (float) sr;
+synth.cpp:1054:    if (speed_lfo && speed_lfo->power->load() && track == source) {
+synth.cpp:1055:        speed_lfo_func = lfo_funcs[(int) speed_lfo->func->load()];
+synth.cpp:1076:    if (awin_lfo && awin_lfo->power->load()) {
+synth.cpp:1077:        awin_lfo_func = lfo_funcs[(int) awin_lfo->func->load()];
+synth.cpp:1096:    if (grainsize_lfo && grainsize_lfo->power->load() && !pv_power && !cross_power) {
+synth.cpp:1097:        grainsize_lfo_func = lfo_funcs[(int) grainsize_lfo->func->load()];
+synth.cpp:1116:    if (offset_lfo && offset_lfo->power->load()) {
+synth.cpp:1117:        offset_lfo_func = lfo_funcs[(int) offset_lfo->func->load()];
+synth.cpp:1136:    if (readoffset_lfo && readoffset_lfo->power->load()) {
+synth.cpp:1137:        readoffset_lfo_func = lfo_funcs[(int) readoffset_lfo->func->load()];
+synth.cpp:1156:    if (dens_lfo && dens_lfo->power->load()) {
+synth.cpp:1157:        dens_lfo_func = lfo_funcs[(int) dens_lfo->func->load()];
+synth.cpp:1181:    if (deviation_lfo && deviation_lfo->power->load()) {
+synth.cpp:1182:        deviation_lfo_func = lfo_funcs[(int) deviation_lfo->func->load()];
+synth.cpp:1205:    if (rndread_lfo && rndread_lfo->power->load()) {
+synth.cpp:1206:        rndread_lfo_func = lfo_funcs[(int) rndread_lfo->func->load()];
+synth.cpp:1228:    if (pitch_lfo && pitch_lfo->power->load()) {
+synth.cpp:1229:        pitch_lfo_func = lfo_funcs[(int) pitch_lfo->func->load()];
+synth.cpp:1259:    if (pitch_min_lfo && pitch_min_lfo->power->load()) {
+synth.cpp:1261:        pitch_min_lfo_func = lfo_funcs[(int) pitch_min_lfo->func->load()];
+synth.cpp:1279:    if (pitch_max_lfo && pitch_max_lfo->power->load()) {
+synth.cpp:1281:        pitch_max_lfo_func = lfo_funcs[(int) pitch_max_lfo->func->load()];
+synth.cpp:1301:    if (semitones_lfo && semitones_lfo->power->load()) {
+synth.cpp:1303:        semitones_lfo_func = lfo_funcs[(int) semitones_lfo->func->load()];
+synth.cpp:2073:    if (lfo1_freq_lfo && lfo1_freq_lfo->power->load()) {
+synth.cpp:2074:        lfo1_freq_lfo_func = lfo_funcs[(int) lfo1_freq_lfo->func->load()];
+synth.cpp:2093:    if (lfo2_freq_lfo && lfo2_freq_lfo->power->load()) {
+synth.cpp:2094:        lfo2_freq_lfo_func = lfo_funcs[(int) lfo2_freq_lfo->func->load()];
+synth.cpp:2113:    if (lfo3_freq_lfo && lfo3_freq_lfo->power->load()) {
+synth.cpp:2114:        lfo3_freq_lfo_func = lfo_funcs[(int) lfo3_freq_lfo->func->load()];
+synth.cpp:2134:    if (grainamp_lfo && grainamp_lfo->power->load()) {
+synth.cpp:2135:        grainamp_lfo_func = lfo_funcs[(int) grainamp_lfo->func->load()];
+synth.cpp:2158:    if (pan_lfo && pan_lfo->power->load()) {
+synth.cpp:2159:        pan_lfo_func = lfo_funcs[(int) pan_lfo->func->load()];
+synth.cpp:2171:        pan_lfo_phinc = LOG2NORMALF(pan_lfo->freq->load()) / (float) sr;
+synth.cpp:2178:    if (speed_lfo && speed_lfo->power->load() && track == source) {
+synth.cpp:2179:        speed_lfo_func = lfo_funcs[(int) speed_lfo->func->load()];
+synth.cpp:2200:    if (awin_lfo && awin_lfo->power->load()) {
+synth.cpp:2201:        awin_lfo_func = lfo_funcs[(int) awin_lfo->func->load()];
+synth.cpp:2220:    if (grainsize_lfo && grainsize_lfo->power->load() && !pv_power && !cross_power) {
+synth.cpp:2221:        grainsize_lfo_func = lfo_funcs[(int) grainsize_lfo->func->load()];
+synth.cpp:2240:    if (offset_lfo && offset_lfo->power->load()) {
+synth.cpp:2241:        offset_lfo_func = lfo_funcs[(int) offset_lfo->func->load()];
+synth.cpp:2260:    if (readoffset_lfo && readoffset_lfo->power->load()) {
+synth.cpp:2261:        readoffset_lfo_func = lfo_funcs[(int) readoffset_lfo->func->load()];
+synth.cpp:2280:    if (dens_lfo && dens_lfo->power->load()) {
+synth.cpp:2281:        dens_lfo_func = lfo_funcs[(int) dens_lfo->func->load()];
+synth.cpp:2306:    if (deviation_lfo && deviation_lfo->power->load()) {
+synth.cpp:2307:        deviation_lfo_func = lfo_funcs[(int) deviation_lfo->func->load()];
+synth.cpp:2330:    if (rndread_lfo && rndread_lfo->power->load()) {
+synth.cpp:2331:        rndread_lfo_func = lfo_funcs[(int) rndread_lfo->func->load()];
+synth.cpp:2353:    if (pitch_lfo && pitch_lfo->power->load()) {
+synth.cpp:2354:        pitch_lfo_func = lfo_funcs[(int) pitch_lfo->func->load()];
+synth.cpp:2384:    if (pitch_min_lfo && pitch_min_lfo->power->load()) {
+synth.cpp:2386:        pitch_min_lfo_func = lfo_funcs[(int) pitch_min_lfo->func->load()];
+synth.cpp:2404:    if (pitch_max_lfo && pitch_max_lfo->power->load()) {
+synth.cpp:2406:        pitch_max_lfo_func = lfo_funcs[(int) pitch_max_lfo->func->load()];
+synth.cpp:2426:    if (semitones_lfo && semitones_lfo->power->load()) {
+synth.cpp:2428:        semitones_lfo_func = lfo_funcs[(int) semitones_lfo->func->load()];
+synth.cpp:2886:    if (lfo1_freq_lfo && lfo1_freq_lfo->power->load()) {
+synth.cpp:2887:        lfo1_freq_lfo_func = lfo_funcs[(int) lfo1_freq_lfo->func->load()];
+synth.cpp:2906:    if (lfo2_freq_lfo && lfo2_freq_lfo->power->load()) {
+synth.cpp:2907:        lfo2_freq_lfo_func = lfo_funcs[(int) lfo2_freq_lfo->func->load()];
+synth.cpp:2926:    if (lfo3_freq_lfo && lfo3_freq_lfo->power->load()) {
+synth.cpp:2927:        lfo3_freq_lfo_func = lfo_funcs[(int) lfo3_freq_lfo->func->load()];
+synth.cpp:2947:    if (grainamp_lfo && grainamp_lfo->power->load()) {
+synth.cpp:2948:        grainamp_lfo_func = lfo_funcs[(int) grainamp_lfo->func->load()];
+PitchShifter.cpp:92:    bool lfo_on = lfo && lfo->power->load() && !env_on;
+PitchShifter.cpp:96:        func = lfo_funcs[(int) lfo->func->load()];
+PitchShifter.cpp:102:        lfophase = *lfo->phase;
+phaser.cpp:65:    if (lfo && lfo->power->load()) {
+phaser.cpp:67:        func = lfo_funcs[(int) lfo->func->load()];
+phaser.cpp:74:        lfophase = *lfo->phase;
+phaser.cpp:155:    if (lfo && lfo->power->load()) {
+phaser.cpp:156:        func = lfo_funcs[(int) lfo->func->load()];
+phaser.cpp:162:        phase = lfo->phase->load();
+phaser.cpp:165:        lfophase = lfo->phase->load();
+ControlItem.cpp:389:    TRACK *track = lfo->track;
+ControlItem.cpp:392:    uint8_t lfoindex = lfo->index;
+ControlItem.cpp:397:            val = pow(10, *lfo->freq * .05) / syncfactor;
+ControlItem.cpp:403:                *lfo->freq = LOG10D20(val);
+ControlItem.cpp:428:            val = pow(10, *lfo->freq * .05) * syncfactor;
+ControlItem.cpp:434:                *lfo->freq = LOG10D20(val);
+ControlItem.cpp:459:            lfo->dir->store(lfo->dir->load() * -1);
+ControlItem.cpp:462:            *lfo->phase = 0;
+ControlItem.cpp:463:            if (lfo->power->load() && tsl::app::params[track->index][POWERTRACK].load() &&
+ControlItem.cpp:465:                lfo->phase_changed.store(true);
+ControlItem.cpp:468:            lfo->stopped->store(true);
+ControlItem.cpp:471:            lfo->stopped->store(false);
+ControlItem.cpp:474:            lfo->phase->store(1.0);
+ControlItem.cpp:475:            if (lfo->power->load() && tsl::app::params[track->index][POWERTRACK].load() &&
+ControlItem.cpp:477:                lfo->phase_changed.store(true);
+ControlItem.cpp:503:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index]) {
+ControlItem.cpp:505:                sprintf(str, "%s %s %s %s\n", str, track->name, lfo->name, returnvalues[ret]);
+ControlItem.cpp:550:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index]) {
+ControlItem.cpp:552:                sprintf(str, "%s %s %s %s\n", str, track->name, lfo->name, returnvalues[ret]);
+ControlItem.cpp:599:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index]) {
+ControlItem.cpp:601:                sprintf(str, "%s %s %s %s\n", str, track->name, lfo->name,
+ControlItem.cpp:665:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index] && lfo != source) {
+ControlItem.cpp:667:                sprintf(str, "%s %s %s %s\n", str, track->name, lfo->name,
+ControlItem.cpp:714:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index]) {
+ControlItem.cpp:716:                sprintf(str, "%s %s %s %s\n", str, track->name, lfo->name,
+ControlItem.cpp:799:    TRACK *track = lfo->track;
+ControlItem.cpp:802:    float syncfactor = tsl::app::params[track->index][LFO1_SYNC_FACTOR + lfo->index].load();
+ControlItem.cpp:808:    *lfo->freq = LOG10D20(val);
+ControlItem.cpp:810:    int lfoindex = lfo->index;
+ControlItem.cpp:819:        p->views.infopanel->ref = lfo->freq;
+ControlItem.cpp:907:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index] && source != lfo) {
+ControlItem.cpp:909:                sprintf(str, "%s %s %s %s\n", str, track->name, lfo->name,
+ControlItem.cpp:994:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index]) {
+ControlItem.cpp:996:                sprintf(str, "%s %s %s %s\n", str, track->name, lfo->name,
+ControlItem.cpp:1071:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index]) {
+ControlItem.cpp:1073:                sprintf(str, "%s %s %s %s\n", str, track->name, lfo->name,
+ControlItem.cpp:1149:            if (tsl::app::params[track->index][LFO1_CONTROLS_ACTIVE + lfo->index]) {
+ControlItem.cpp:1151:                sprintf(str, "%s %s %s %s\n", str, track->name, lfo->name,
+envwin2.cpp:344:    const float w = width * lfo->zoom;
+envwin2.cpp:348:    const int segments = lfo->segments;
+envwin2.cpp:353:            if (lfo->zoom.load() < 1.0) {
+envwin2.cpp:354:                float points = width * lfo->zoom.load();
+envwin2.cpp:358:                        diff + lfo->positions[i].load() * points - segsized2 &&
+envwin2.cpp:359:                        xpos < diff + lfo->positions[i].load() * points + segsized2 &&
+envwin2.cpp:360:                        ypos > (1.0 - lfo->values[i].load()) * h -
+envwin2.cpp:362:                        ypos < (1.0 - lfo->values[i].load()) * h + segsized2) {
+envwin2.cpp:363:                        lfo->active_seg = i;
+envwin2.cpp:370:                    if (xpos + width * lfo->pos * lfo->zoom >
+envwin2.cpp:371:                        lfo->positions[i] * w - segsized2 &&
+envwin2.cpp:373:                        width * lfo->pos * lfo->zoom/**/<lfo->positions[i] * w + segsized2 &&
+envwin2.cpp:374:                                                               ypos>(1.0 - lfo->values[i]) * h -
+envwin2.cpp:376:                        ypos < (1.0 - lfo->values[i]) * h + segsized2) {
+envwin2.cpp:377:                        lfo->active_seg = i;
+envwin2.cpp:395:                        float val =  val = lfo->values[active_seg];
+envwin2.cpp:396:                        //LOGE("%d %f %f", lfo->active_seg, val, diffy);
+envwin2.cpp:402:                        lfo->values[active_seg] = val;
+envwin2.cpp:403:                        if (lfo->joinends) {
+envwin2.cpp:405:                                lfo->values[segments] = val;
+envwin2.cpp:407:                                lfo->values[0] = val;
+envwin2.cpp:411:                            val = lfo->positions[active_seg];
+envwin2.cpp:421:                                prev = lfo->positions[active_seg - 1];
+envwin2.cpp:422:                            if (active_seg == lfo->segments - 1)
+envwin2.cpp:425:                                next = lfo->positions[active_seg + 1];
+envwin2.cpp:427:                                lfo->positions[active_seg] = val;
+envwin2.cpp:429:                        lfo->compute_env.store(true);
+envwin2.cpp:437:                        if (lfo->zoom.load() >= 1.f) {
+envwin2.cpp:438:                            float pos = lfo->pos.load() - diffx;
+envwin2.cpp:439:                            float max = 1 - 1 / lfo->zoom.load();
+envwin2.cpp:440:                            lfo->pos = pos < 0 ? 0 : (pos > max ? max : pos);
+envwin2.cpp:442:                            lfo->pos = 0;
+envwin2.cpp:454:                        float zoom = newdist / olddist * lfo->zoom.load();
+envwin2.cpp:459:                        float diff = (1 - zoom / lfo->zoom.load()) / zoom;
+envwin2.cpp:461:                                lfo->pos.load() - diff * ((xposold + xpos) * .5f / width);
+envwin2.cpp:463:                        lfo->pos = newpos < 0 ? 0 : (newpos > max ? max : newpos);
+envwin2.cpp:464:                        lfo->zoom = zoom;
+envwin2.cpp:475:                float inc = 1.f / (float) lfo->segments.load();
+envwin2.cpp:476:                float step = inc * lfo->quant.load();
+envwin2.cpp:478:                for (int i = 1; i < lfo->segments.load(); i++) {
+envwin2.cpp:481:                    float pos = lfo->positions[i].load();
+envwin2.cpp:483:                        float dist = DISTANCE(start, lfo->positions[i].load());
+envwin2.cpp:485:                            lfo->positions[i] = start + (dist < step / 2 ? 0 : step);
+envwin2.cpp:491:                lfo->compute_env = true;
+envwin2.cpp:499:                    if(it->mode == lfo->active_seg.load())
+envwin2.cpp:500:                        lfo->active_seg.store(-10000);
+envwin2.cpp:511://LOGE("%ld %f %f %f", AMotionEvent_getPointerCount(event), lfo->zoom.load(), lfo->pos.load(), olddist);
+envwin2.cpp:520:    if (lfo->compute_env.load()) {
+envwin2.cpp:521:        lfo->compute_env.store(false);
+envwin2.cpp:522:        float *tab = lfo->active_table.load() == lfo->table[0] ? lfo->table[1] : lfo->table[0];
+envwin2.cpp:523:        p->lfoeditfunc[(int) lfo->editfunc.load()](tab, WINDOW_SIZE, &lfo->positions[0],
+envwin2.cpp:524:                                                   &lfo->values[0], lfo->segments, true);
+envwin2.cpp:525:        lfo->active_table.store(tab);
+envwin2.cpp:526:        lfo->env[4] = tab;
+envwin2.cpp:528:    float *table = lfo->active_table.load();
+envwin2.cpp:560:    if (lfo->zoom.load() >= 1.0) {
+envwin2.cpp:567:        float w = canvas_size.x * lfo->zoom;
+envwin2.cpp:571:        float step_point = (WINDOW_SIZE - 1) * lfo->pos;
+envwin2.cpp:573:        float hit = w * *lfo->phase;
+envwin2.cpp:574:        float hithead = hit + (ISNEG(lfo->dir->load()) ? length_line : 0);
+envwin2.cpp:575:        float hittail = hit - (ISNEG(lfo->dir->load()) ? 0 : length_line);
+envwin2.cpp:590:        for (int point = 0; point < lfo->segments + 1; point++) {
+envwin2.cpp:592:                    ImVec2(canvas_pos.x + lw + w * lfo->positions[point] - w * lfo->pos,
+envwin2.cpp:593:                           canvas_pos.y + h + lw - h * lfo->values[point]),
+envwin2.cpp:595:                            point == lfo->active_seg ? IM_COL32(127, 127, 127, 127)
+envwin2.cpp:600:        float points = canvas_size.x * lfo->zoom.load();
+envwin2.cpp:622:        float hit = diff + points * *lfo->phase;
+envwin2.cpp:623:        float hithead = hit + (ISNEG(lfo->dir->load()) ? length_line : 0);
+envwin2.cpp:624:        float hittail = hit - (ISNEG(lfo->dir->load()) ? 0 : length_line);
+envwin2.cpp:639:        for (int point = 0; point < lfo->segments + 1; point++) {
+envwin2.cpp:641:                    ImVec2(canvas_pos.x + diff + points * lfo->positions[point].load(),
+envwin2.cpp:642:                           canvas_pos.y + h - h * lfo->values[point]),
+envwin2.cpp:644:                            point == lfo->active_seg ? IM_COL32(127, 127, 127, 127)
+plusminuscontrol.cpp:263:                                float *table = lfo->active_table.load();
+plusminuscontrol.cpp:265:                                    lfo->positions[i] = start;
+plusminuscontrol.cpp:266:                                    lfo->values[i] = table[(int) ((WINDOW_SIZE - 1) * start)];
+plusminuscontrol.cpp:269:                                //if(lfo->joinends)
+plusminuscontrol.cpp:270:                                ;//lfo->values[(int) value].store(lfo->values[0].load());
+plusminuscontrol.cpp:271:                                lfo->segments = value;
+plusminuscontrol.cpp:272:                                lfo->compute_env = true;
+plusminuscontrol.cpp:290:                            float value = lfo->segments - 1;
+plusminuscontrol.cpp:295:                            float *table = lfo->active_table.load();
+plusminuscontrol.cpp:297:                                lfo->positions[i] = start;
+plusminuscontrol.cpp:298:                                lfo->values[i] = table[(int) ((WINDOW_SIZE - 1) * start)];
+plusminuscontrol.cpp:301:                            //if(lfo->joinends)
+plusminuscontrol.cpp:302:                            ;//lfo->values[(int) value].store(lfo->values[0].load());
+plusminuscontrol.cpp:303:                            lfo->segments = value;
+plusminuscontrol.cpp:304:                            lfo->compute_env = true;
+plusminuscontrol.cpp:324:                            float value = lfo->segments + 1;
+plusminuscontrol.cpp:329:                            float *table = lfo->active_table.load();
+plusminuscontrol.cpp:331:                                lfo->positions[i] = start;
+plusminuscontrol.cpp:332:                                lfo->values[i] = table[(int) ((WINDOW_SIZE - 1) * start)];
+plusminuscontrol.cpp:335:                            //if(lfo->joinends)
+plusminuscontrol.cpp:336:                            ;//lfo->values[(int) value].store(lfo->values[0].load());
+plusminuscontrol.cpp:337:                            lfo->segments = value;
+plusminuscontrol.cpp:338:                            lfo->compute_env = true;
+plusminuscontrol.cpp:447:                        float value = lfo->clockmulti.load() - .1f;
+plusminuscontrol.cpp:450:                        lfo->clockmulti = value;
+plusminuscontrol.cpp:453:                        float value = lfo->clockmulti.load() + .1f;
+plusminuscontrol.cpp:456:                        lfo->clockmulti = value;
+filter.cpp:239:    bool lfo_on = lfo && lfo->power->load();
+filter.cpp:241:        if (!lfo->stopped->load() && !lfo->syncmidi.load())
+filter.cpp:242:            inc = (float) (_twopidsr * pow(10, *lfo->freq * .05));
+filter.cpp:243:        dir = lfo->dir->load();
+filter.cpp:244:        phase = *lfo->phase * M_2PI_F;
+filter.cpp:507:    bool lfo_on = lfo && lfo->power->load();
+filter.cpp:509:        func = lfo_funcs[(int) lfo->func->load()];
+filter.cpp:510:        if (!lfo->stopped->load() && !lfo->syncmidi.load())
+filter.cpp:511:            inc = (float) (M_2PI_F / (double) _sr * pow(10, *lfo->freq * .05));
+filter.cpp:514:        dir = lfo->dir->load();
+filter.cpp:515:        phase = *lfo->phase * M_2PI_F;
+filter.cpp:711:    bool lfo_on = lfo && lfo->power->load();
+filter.cpp:715:        func = lfo_funcs[(int) lfo->func->load()];
+filter.cpp:720:        lfophase = lfo->phase->load();
+infopanel.cpp:313:    if (lfo->active_seg.load() == -1)
+infopanel.cpp:316:    uint16_t control_num = tsl::app::params[track->index][LFO1_DEST + lfo->index].load();
+infopanel.cpp:322:                      lfo->values[lfo->active_seg.load()].load();
+infopanel.cpp:399:    float ms = 1000.f / powf(10, lfo->freq->load() * .05f) *
+infopanel.cpp:400:               lfo->positions[lfo->active_seg.load()].load();
+envelope_window.cpp:363:    phase = lfo->phase->load();
+envelope_window.cpp:364:    func = lfo_funcs[(int) lfo->func->load()];
+envelope_window.cpp:365:    dir = lfo->dir->load();

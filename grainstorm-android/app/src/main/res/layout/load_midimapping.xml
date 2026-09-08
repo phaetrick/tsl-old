@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/load_preset"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingTop="16dp"
+    android:paddingBottom="16dp">
+
+    <View style="@style/Seperator" />
+    <TextView
+        android:id="@+id/empty_view_load"
+        android:layout_width="match_parent"
+        android:gravity="center"
+        android:visibility="gone"
+        android:layout_height="216dp"
+        android:textSize="16sp"
+        android:textColor="@color/white"
+        android:paddingStart="8dp"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        android:paddingEnd="8dp"
+        android:text="No presets found."/>
+
+    <me.rocks.grainstorm.MyRecyclerView
+        android:id="@+id/load_preset_recyclerview"
+        android:layout_width="match_parent"
+        android:layout_height="216dp" />
+</LinearLayout>

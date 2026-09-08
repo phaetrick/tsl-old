@@ -1,0 +1,193 @@
+apply plugin: 'com.android.application'
+
+def localProps = new Properties()
+def localPropsFile = file("${rootProject.projectDir}/local.properties")
+if (localPropsFile.exists()) localProps.load(localPropsFile.newDataInputStream())
+
+android {
+    namespace "me.rocks.grainstorm"
+    compileSdk = 37  // Add the '=' here
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        prefab true
+    }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
+    defaultConfig {
+        applicationId "me.rocks.grainstorm"
+        minSdkVersion 24
+        targetSdkVersion 36
+        versionCode 568
+        versionName "1.10.0"
+        externalNativeBuild {
+            cmake {
+                version "3.22.1"
+                arguments '-DCMAKE_VERBOSE_MAKEFILE=ON',
+                        '-DANDROID_STL=c++_shared',
+                        '-DANDROID_PLATFORM=android-24',
+                        '-DANDROID_ARM_NEON=ON'
+                // No CMAKE_BUILD_TYPE here — set per buildType below
+            }
+        }
+        ndk {
+            // Specifies the ABI configurations of your native
+            // libraries Gradle should build and package with your APK.
+            //abiFilters 'x86', 'x86_64', 'armeabi', 'armeabi-v7a',
+            //        'arm64-v8a'
+            //noinspection ChromeOsAbiSupport
+            abiFilters  'arm64-v8a'//, 'armeabi-v7a','x86_64'
+        }
+    }
+    signingConfigs {
+        release {
+            storeFile file(localProps['KEYSTORE_PATH'] ?: 'missing.keystore')
+            storePassword localProps['KEYSTORE_PASSWORD'] ?: ''
+            keyAlias localProps['KEY_ALIAS'] ?: ''
+            keyPassword localProps['KEY_PASSWORD'] ?: ''
+        }
+        localTest {
+            storeFile file(localProps['LOCAL_KEYSTORE_PATH'] ?: 'missing.keystore')
+            storePassword localProps['LOCAL_KEYSTORE_PASSWORD'] ?: ''
+            keyAlias localProps['LOCAL_KEY_ALIAS'] ?: ''
+            keyPassword localProps['LOCAL_KEY_PASSWORD'] ?: ''
+        }
+    }
+    buildTypes {
+        release {
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCMAKE_BUILD_TYPE=Release"
+                    // Linker flag for 16KB ELF alignment
+                    cppFlags "-Wl,-z,max-page-size=16384"
+
+                    // Optional: Also good to have for older NDKs
+                    arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+                    // Remove cppFlags "-DRELEASEBUILD" —
+                    // common_interface handles it via $<$<CONFIG:Release>:RELEASEBUILD>
+                }
+            }
+            signingConfig signingConfigs.release
+            shrinkResources true
+            minifyEnabled true
+            debuggable false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            ndk {
+                // Set the debug symbol level for the release build
+                // Choose between "SYMBOL_TABLE" or "FULL"
+
+                debugSymbolLevel 'SYMBOL_TABLE'
+                // Strip all debug symbols
+
+            }
+        }
+        debug {
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCMAKE_BUILD_TYPE=Debug"
+                }
+            }
+        }
+        staging {
+            initWith buildTypes.release
+            signingConfig signingConfigs.localTest
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            def isMac = System.getProperty('os.name').toLowerCase().contains('mac')
+            def grainstormOldRoot = isMac
+                ? "${System.getProperty('user.home')}/programming/grainstorm-old"
+                : "/home/pr/programming/grainstorm-old"
+            path file("${grainstormOldRoot}/grainstorm/CMakeLists.txt")
+        }
+    }
+
+    ndkVersion "28.1.13356709"//"29.0.13113456"//"""26.3.11579264"//"25.2.9519653"
+    lint {
+        //checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.google.android.material:material:1.14.0'
+    implementation 'androidx.recyclerview:recyclerview:1.4.0'
+    implementation 'androidx.documentfile:documentfile:1.1.0'
+    implementation 'androidx.preference:preference:1.2.1'
+    implementation 'com.android.billingclient:billing:9.1.0'
+    implementation('com.google.guava:guava:33.6.0-jre')
+    implementation 'com.google.oboe:oboe:1.10.0'
+    implementation "androidx.activity:activity:1.13.0"
+    implementation "androidx.core:core-splashscreen:1.2.0"
+    // (Recommended) Add the Google Analytics dependency.
+
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        def protectedNames = ["release", "staging"]
+
+        if (protectedNames.contains(variant.name.toLowerCase())) {
+            // Fix: Use the explicit artifact object
+            variant.artifacts.get(SingleArtifact.MERGED_NATIVE_LIBS.INSTANCE)
+                    .map { directory ->
+                        // directory is a RegularFileProperty/DirectoryProperty
+                        def dirFile = directory.asFile
+                        if (dirFile.exists()) {
+                            dirFile.walkTopDown().each { soFile ->
+                                if (soFile.name == "libgrainstorm.so") {
+                                    println "--- Security: Patching .text Hash [${variant.name}] ---"
+                                    def patchPath = "${System.getProperty('user.home')}/patchhash"
+                                    def process = new ProcessBuilder(patchPath, soFile.absolutePath)
+                                            .inheritIO()
+                                            .start()
+
+                                    if (process.waitFor() != 0) {
+                                        throw new GradleException("Integrity Patching failed!")
+                                    }
+                                }
+                            }
+                        }
+                        return directory
+                    }
+        }
+    }
+}
+/*
+def patchhashBuildDir = layout.buildDirectory.get().asFile.absolutePath
+
+tasks.whenTaskAdded { task ->
+    if (task.name == 'stripReleaseDebugSymbols') {
+        task.doLast {
+            def so = "${patchhashBuildDir}/intermediates/stripped_native_libs/release/stripReleaseDebugSymbols/out/lib/arm64-v8a/libgrainstorm.so"
+            def process = new ProcessBuilder(
+                    "${System.getProperty('user.home')}/patchhash", so)
+                    .inheritIO()
+                    .start()
+            def exitCode = process.waitFor()
+            if (exitCode != 0)
+                throw new GradleException("patchhash failed with exit code ${exitCode}")
+        }
+    }
+}
+*/
+
+
+import com.android.build.api.artifact.SingleArtifact
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+
+tasks.withType(KotlinJvmCompile).configureEach {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17) // Or JVM_11 if you stayed on 11
+    }
+}

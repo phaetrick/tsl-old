@@ -1,0 +1,17 @@
+build
+build-win
+out
+.vs
+cmake-*
+
+cmake-build-*/
+build.log
+out/
+*.a
+*.app/
+*.appex/
+*.xcresult/
+thirdparty/**/*.lib
+thirdparty/**/*.a
+*.log
+.DS_Store

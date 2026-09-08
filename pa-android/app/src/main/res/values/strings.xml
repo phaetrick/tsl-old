@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+     Copyright (C) 2010 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+<resources>
+
+    <!-- Launcher/display name only. The applicationId (me.rocks.pocketanalog) is
+         frozen forever by Play and must NOT follow this rename. Neither must the
+         on-disk identifiers (tsl::app::appName, the PocketAnalog/Recordings
+         folder), which would orphan existing users' settings and recordings. -->
+    <string name="app_name">Voltaic</string>
+    <string name="fgs_description">Provides low-latency background audio for the synth engine.</string>
+
+    <string name="startPoweredOn">startPoweredOn</string>
+    <string name="runAsForeGround">runAsForeGround</string>
+    <string name="bufsize">Audio Buffersize v2</string>
+    <!-- v3: frames at the fixed 48 kHz engine rate. New key on purpose - v2 held
+         device-derived counts that mean a different latency in this scale. -->
+    <string name="bufsize3">Audio Buffersize v3</string>
+    <string name="samplerate">Samplerate</string>
+    <string name="bitdepth">Recording Format</string>
+    <string name="channels">Channels v2</string>
+    <string name="settingstext">Settings</string>
+    <string name="abouttext">About</string>
+    <string name="eulaitemtext">EULA</string>
+    <string name="opensourcetext">Open Source Software</string>
+    <string name="instructions">Instructions</string>
+    <string name="bitdepth16bit">16bit SHORT</string>
+    <string name="bitdepth32bit">32bit FLOAT</string>
+    <string name="framerate">Display Framerate</string>
+    <string name="virtualmem">Virtual Memory</string>
+    <string name="usageamount">Usage Amount</string>
+    <string name="titleiap">Voltaic Lifetime</string>
+    <string name="pathinternalfilepicker">Path Internal File Picker2</string>
+    <string name="pathexternalfilepicker">Path External File Picker2</string>
+    <string name="pathinternaldirpicker">Path Internal Dir Picker2</string>
+    <string name="pathexternaldirpicker">Path External Dir Picker2</string>
+    <string name="lastfilebrowsertype">Last Filebrowser Type2</string>
+    <string name="audiosource">Audio Source v2</string>
+    <string name="filepicker">File Picker v3</string>
+    <string name="recordingdirectory">Recording Directoryv2</string>
+    <string name="askname">Ask Namev2</string>
+    <string name="eula">End User License Agreement</string>
+    <string name="oss">Open Source Software</string>
+    <string name="policy">Privacy Policy</string>
+    <string name="changelog">Changelog</string>
+    <string name="upgrade">Voltaic Upgrade</string>
+    <string name="synth_sender_text">Select Sender for Synth</string>
+    <string name="error_port_busy">Selected port is in use or unavailable.</string>
+    <string name="port_open_ok">Port opened OK.</string>
+    <string name="ignoresecondnoteonevent">Ignore every second Note On event</string>
+    <string name="writemic">Write Microphone Recording to disk</string>
+    <string name="recordingformat">Recording Format</string>
+    <string name="pauseplayback">Pause Playback</string>
+    <string name="homedirectory">Show Homedirectory</string>
+    <string name="hqresampling">HQ Resampling</string>
+    <string name="showfactory">showFactoryPresets</string>
+    <string name="presetfolderreset">presetFolderReset</string>
+    <string name="newstorageinfoshow">newstorageinfoshow</string>
+    <string name="useaaudio">Use AAudio</string>
+    <string name="midisender">Midi Source</string>
+    <string name="unavailable">Unavailable.</string>
+    <!-- Quoted: Android strips trailing whitespace from an unquoted resource, so
+         the space vanished and the bar read "Price:8,99 EUR". -->
+    <string name="price">"Price: "</string>
+    <string name="preferences">someprefs</string>
+    <string name="pref1">res</string>
+    <string name="pref2">vl</string>
+    <string name="presetdirectory">presetDirectory</string>
+    <string name="presetwarn">Free Version. Presets will not persist among restarts.</string>
+    <string-array name="senders">
+        <item>"none"</item>
+    </string-array>
+    <string name="screenonflag">Always Keep Screen On</string>
+
+
+</resources>

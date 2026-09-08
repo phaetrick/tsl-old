@@ -1,0 +1,16 @@
+# content of .gitignore
+.gradle
+
+build
+
+.idea
+
+local.properties
+
+# Build outputs that were tracked by accident — app/staging held an 18 MB APK
+# plus its baseline profiles, rewritten on every staging build.
+app/staging/
+*.apk
+*.aab
+
+.DS_Store

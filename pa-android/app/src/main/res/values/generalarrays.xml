@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Buffer size. The stored value is an INDEX into kBufferChoiceFrames in
+         player.cpp, which owns the actual sizes and resolves them at the
+         engine's rate. Order here must match that table; index 0 is Auto. -->
+    <string-array name="bufsize_entries">
+        <item>"Auto"</item>
+        <item>"5 ms"</item>
+        <item>"10 ms"</item>
+        <item>"20 ms"</item>
+        <item>"40 ms"</item>
+        <item>"80 ms"</item>
+        <item>"160 ms"</item>
+    </string-array>
+    <string-array name="bufsize_values">
+        <item>"0"</item>
+        <item>"1"</item>
+        <item>"2"</item>
+        <item>"3"</item>
+        <item>"4"</item>
+        <item>"5"</item>
+        <item>"6"</item>
+    </string-array>
+    <string-array name="channel_layout_entries">
+        <item>"Mono"</item>
+        <item>"Stereo"</item>
+    </string-array>
+    <string-array name="channel_layout_values">
+        <item >"1"</item>
+        <item >"2"</item>
+    </string-array>
+    <string-array name="recording_format_entries">
+        <item>"WAV 16bit"</item>
+        <item>"MP3 CBR 320 kbps"</item>
+        <item>"FLAC Lossless 16bit"</item>
+        <item>"FLAC Lossless 24bit"</item>
+        <item>"WAV 32bit"</item>
+    </string-array>
+    <string-array name="recording_format_values">
+        <item>"0"</item>
+        <item>"1"</item>
+        <item>"10"</item>
+        <item>"11"</item>
+        <item>"12"</item>
+    </string-array>
+</resources>

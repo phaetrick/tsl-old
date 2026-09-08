@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "102070521013",
+    "project_id": "grainstorm2",
+    "storage_bucket": "grainstorm2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:102070521013:android:0ea450500a423c57a842fc",
+        "android_client_info": {
+          "package_name": "me.rocks.grainstorm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBIcxTNMMbpkGFSrcctYYDq9FBT-mbzEg8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

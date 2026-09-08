@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/filebrowser"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:id="@+id/path2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Path"
+        android:textSize="16sp"
+        android:height="48dp"
+        android:textColor="@color/white"
+        android:paddingStart="8dp"
+        android:paddingLeft="8dp"
+        android:paddingEnd="8dp"
+        android:paddingRight="8dp"
+        android:gravity="center_vertical">
+    </TextView>
+    <View style="@style/Seperator" />
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+    <TextView
+        android:id="@+id/dirup2"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="../"
+        android:textColor="@color/white"
+        android:height="48dp"
+        android:textSize="23sp"
+        android:background="@drawable/selector_row"
+        android:gravity="center_vertical"
+        />
+    <ListView
+        android:id="@+id/list"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:listSelector="@drawable/selector_row">
+    </ListView>
+    </LinearLayout>
+</LinearLayout>

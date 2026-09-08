@@ -1,0 +1,137 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-vst3:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+        with:
+          path: programming/grainstorm_iplug2
+
+      - name: Checkout CPP-New
+        uses: actions/checkout@v4
+        with:
+          repository: phaetrick/CPP-New
+          token: ${{ secrets.GH_PAT }}
+          path: programming/CPP-New
+
+      - name: Checkout iPlug2
+        uses: actions/checkout@v4
+        with:
+          repository: phaetrick/iPlug2-tsl
+          token: ${{ secrets.GH_PAT }}
+          path: programming/sources/iPlug2
+
+      - name: Cache VST3 SDK
+        id: cache-vst3
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/programming/sources/iPlug2/Dependencies/IPlug/VST3_SDK
+          key: vst3-sdk-master-v2
+          save-always: true
+
+      - name: Download VST3 SDK
+        if: steps.cache-vst3.outputs.cache-hit != 'true'
+        run: |
+          $vst3dir = "${{ github.workspace }}/programming/sources/iPlug2/Dependencies/IPlug/VST3_SDK"
+          Remove-Item -Recurse -Force $vst3dir -ErrorAction SilentlyContinue
+          git clone https://github.com/steinbergmedia/vst3sdk.git --branch master --single-branch --depth=1 $vst3dir
+          Set-Location $vst3dir
+          git submodule update --init pluginterfaces
+          git submodule update --init base
+          git submodule update --init public.sdk
+          git submodule update --init cmake
+        shell: pwsh
+
+      - name: Cache iPlug2 Windows prebuilt libs
+        id: cache-iplug2-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/programming/sources/iPlug2/Dependencies/Build/win
+            ${{ github.workspace }}/programming/sources/iPlug2/Dependencies/Build/src
+          key: iplug2-deps-win-v4
+          save-always: true
+
+      - name: Download iPlug2 prebuilt Windows libs
+        if: steps.cache-iplug2-deps.outputs.cache-hit != 'true'
+        working-directory: ${{ github.workspace }}/programming/sources/iPlug2/Dependencies
+        run: bash download-prebuilt-libs.sh win
+        shell: bash
+
+      - name: Find OpenSSL path
+        id: find-openssl
+        run: |
+          $paths = @(
+            "C:/Program Files/OpenSSL",
+            "C:/Program Files/OpenSSL-Win64",
+            "C:/OpenSSL-Win64"
+          )
+          foreach ($p in $paths) {
+            if (Test-Path "$p/include") {
+              echo "OPENSSL_ROOT=$p" >> $env:GITHUB_OUTPUT
+              Write-Host "Found OpenSSL at $p"
+              exit 0
+            }
+          }
+          Write-Error "OpenSSL not found"
+        shell: pwsh
+
+      - name: Import code signing certificate
+        run: |
+          $pfxBytes = [Convert]::FromBase64String("${{ secrets.WINDOWS_CERT_PFX }}")
+          $pfxPath = "$env:RUNNER_TEMP\tsl_codesign.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
+          $pwd = ConvertTo-SecureString "${{ secrets.WINDOWS_CERT_PASSWORD }}" -AsPlainText -Force
+          Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $pwd
+          Remove-Item $pfxPath
+        shell: pwsh
+
+      - name: Configure CMake (VST3)
+        run: |
+          cmake -B programming/grainstorm_iplug2/build-vst3 `
+                -S programming/grainstorm_iplug2 `
+                -DBUILD_TARGET=vst3 `
+                -DHOME_PATH="${{ github.workspace }}" `
+                -DCMAKE_BUILD_TYPE=Release `
+                -DOPENSSL_ROOT_DIR="${{ steps.find-openssl.outputs.OPENSSL_ROOT }}" `
+                -DCODE_SIGN_THUMBPRINT="35FC7877FF01B0A2DE48CC9D86AD413EDB4C030C"
+        shell: pwsh
+
+      - name: Build VST3
+        run: cmake --build programming/grainstorm_iplug2/build-vst3 --config Release
+        shell: pwsh
+
+      - name: Configure CMake (App)
+        run: |
+          cmake -B programming/grainstorm_iplug2/build-app `
+                -S programming/grainstorm_iplug2 `
+                -DBUILD_TARGET=app `
+                -DHOME_PATH="${{ github.workspace }}" `
+                -DCMAKE_BUILD_TYPE=Release `
+                -DOPENSSL_ROOT_DIR="${{ steps.find-openssl.outputs.OPENSSL_ROOT }}" `
+                -DCODE_SIGN_THUMBPRINT="35FC7877FF01B0A2DE48CC9D86AD413EDB4C030C"
+        shell: pwsh
+
+      - name: Build App
+        run: cmake --build programming/grainstorm_iplug2/build-app --config Release
+        shell: pwsh
+
+      - name: Upload VST3
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Grainstorm-VST3-Windows
+          path: programming/grainstorm_iplug2/build-vst3/**/*.vst3
+
+      - name: Upload App
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Grainstorm-App-Windows
+          path: programming/grainstorm_iplug2/build-app/**/*.exe

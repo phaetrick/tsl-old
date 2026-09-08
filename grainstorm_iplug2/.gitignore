@@ -1,0 +1,21 @@
+build
+build-win
+out
+.vs
+cmake-*
+
+cmake-build-*/
+build.log
+out/
+*.a
+*.app/
+*.appex/
+*.xcresult/
+thirdparty/**/*.lib
+thirdparty/**/*.a
+*.log
+.DS_Store
+
+# Built test host + its debug bundle (tests/auhost/build.sh regenerates them)
+tests/auhost/auhost
+tests/auhost/*.dSYM/

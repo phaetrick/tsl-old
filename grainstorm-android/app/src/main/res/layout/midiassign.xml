@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="8dp">
+    <TextView
+        android:id="@+id/midiTitle"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/transparent"
+        android:gravity="center_horizontal|center_vertical"
+        android:maxLines="1"
+        android:paddingStart="16dp"
+        android:paddingLeft="8dp"
+        android:paddingEnd="8dp"
+        android:paddingRight="8dp"
+        android:textAppearance="@android:style/TextAppearance.Material.DialogWindowTitle"
+        android:textColor="@color/white"
+        android:textColorHighlight="@color/rowclick"/>
+
+    <LinearLayout
+        android:id="@+id/minlayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight = "0"
+            android:background="@color/transparent"
+            android:gravity="center"
+            android:maxLines="1"
+            android:paddingStart="8dp"
+            android:paddingLeft="8dp"
+            android:paddingEnd="8dp"
+            android:paddingRight="8dp"
+            android:text="BOUND A:"
+            android:textColor="@color/white"
+            android:textColorHighlight="@color/rowclick"
+            android:textAppearance="@android:style/TextAppearance.Material.Medium" />
+
+        <EditText
+            android:id="@+id/minValue"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_weight = "1"
+            android:background="@color/transparent"
+            android:ems="10"
+            android:gravity="center"
+            android:inputType="numberSigned|numberDecimal"
+            android:paddingStart="8dp"
+            android:paddingLeft="8dp"
+            android:paddingEnd="8dp"
+            android:paddingRight="8dp"
+            android:textColor="@color/white"
+            android:textAppearance="@android:style/TextAppearance.Material.Medium"
+            android:textColorHighlight="@color/rowclick"/>
+
+        <TextView
+            android:id="@+id/valueNameMin"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight = "0"
+            android:background="@color/transparent"
+            android:gravity="center"
+            android:maxLines="1"
+            android:paddingStart="8dp"
+            android:paddingLeft="8dp"
+            android:paddingEnd="8dp"
+            android:paddingRight="8dp"
+            android:textColor="@color/white"
+            android:textColorHighlight="@color/rowclick"
+            android:textAppearance="@android:style/TextAppearance.Material.Medium"  />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/maxlayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight = "0"
+            android:background="@color/transparent"
+            android:gravity="center"
+            android:maxLines="1"
+            android:paddingStart="8dp"
+            android:paddingLeft="8dp"
+            android:paddingEnd="8dp"
+            android:paddingRight="8dp"
+            android:text="BOUND B:"
+            android:textColor="@color/white"
+            android:textColorHighlight="@color/rowclick"
+            android:textAppearance="@android:style/TextAppearance.Material.Medium" />
+
+        <EditText
+            android:id="@+id/maxValue"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_weight = "1"
+            android:background="@color/transparent"
+            android:ems="10"
+            android:gravity="center"
+            android:inputType="numberSigned|numberDecimal"
+            android:paddingStart="8dp"
+            android:paddingLeft="8dp"
+            android:paddingEnd="8dp"
+            android:paddingRight="8dp"
+            android:textColor="@color/white"
+            android:textAppearance="@android:style/TextAppearance.Material.Medium"
+            android:textColorHighlight="@color/rowclick" />
+
+        <TextView
+            android:layout_weight = "0"
+            android:id="@+id/valueNameMax"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:background="@color/transparent"
+            android:gravity="center"
+            android:maxLines="1"
+            android:paddingStart="8dp"
+            android:paddingLeft="8dp"
+            android:paddingEnd="8dp"
+            android:paddingRight="8dp"
+            android:textColor="@color/white"
+            android:textColorHighlight="@color/rowclick"
+            android:textAppearance="@android:style/TextAppearance.Material.Medium" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/midiStatus"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/transparent"
+        android:gravity="center_horizontal|center_vertical"
+        android:maxLines="1"
+        android:paddingStart="16dp"
+        android:paddingLeft="8dp"
+        android:paddingEnd="8dp"
+        android:paddingRight="8dp"
+        android:textAppearance="@style/TextAppearance.AppCompat.Small"
+        android:textColor="@color/white"
+        android:textColorHighlight="@color/rowclick" />
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="48dp">
+
+        <Button
+            android:id="@+id/midilearingdismiss"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="0"
+            android:text="Cancel"
+            android:textColor="@color/colorAccent"
+            android:textSize="16sp" />
+
+        <View
+           android:layout_weight="1"
+           android:layout_width="match_parent"
+           android:layout_height="match_parent"/>
+        <Button
+            android:id="@+id/midilearningcommit"
+            android:layout_weight="0"
+            android:visibility="gone"
+            style="?android:attr/borderlessButtonStyle"
+            android:text="Commit"
+            android:textSize="16sp"
+            android:textColor="@color/colorAccent"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent" />
+    </LinearLayout>
+</LinearLayout>

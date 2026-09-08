@@ -1,0 +1,9 @@
+SyntaxError: Unexpected token, expected "," (6:16)
+
+  4 | ps.forEach(p=>{
+  5 |   const purch = db.purchases.find({product:p._id},{status:1,type:1,licenseRevoked:1,maxDevices:1,customer:1,registeredDevices:1,createdAt:1}).toArray();
+> 6 |   print(product index +p.index+ - purchases);
+    |                 ^
+  7 |   purch.forEach(q=>print( +String(q._id).slice(-6)+ cust=+String(q.customer).slice(-6)+ type=+q.type+ status=+q.status+ revoked=+q.licenseRevoked+ max=+q.maxDevices+ devices=+((q.registeredDevices||[]).length)));
+  8 | });
+  9 |

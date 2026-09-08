@@ -1,0 +1,222 @@
+#include "lc.h"
+
+#include <LicenseChecker.h>
+#include "DynamicDialog.h"
+#include "AnimatedSpinner.h"
+#include "app.h"
+#include <IconsMaterialDesignReduced.h>
+
+void tsl::Lc::threadFunc(tsl::AppState* _appState) {
+
+	_STATE->uiReady.wait(false);
+	std::thread::id this_thread = std::this_thread::get_id();
+	tsl::graphics::AnimatedSpinner spinner(_STATE);
+
+
+	tsl::LicenseChecker ls("localhost", false, 3000, tsl::app::lsName);
+	if (!ls.hasCookie()) {
+		while (!_STATE->destroyRequested.load()) {
+			auto inetConnect = ls.checkConnectivity();
+			spinner.deldraw();
+			if (!inetConnect.internetAvailable) {
+				auto loginDialog = std::make_unique<tsl::graphics::DynamicDialog>(_STATE);
+				loginDialog->setTitle("No internet connection detected on first launch. Please verify your network settings.");
+				loginDialog->onCompleteCallback = [&](const tsl::graphics::DynamicDialog::DialogResult& result) {
+					_STATE->waitNotify.wake_thread(this_thread); // unblocks
+					};
+				loginDialog->setCustomButton("Try again", [_STATE, this_thread]() {
+					_STATE->waitNotify.wake_thread(this_thread); // unblocks
+					});
+
+				loginDialog->init();
+				loginDialog->addDraw();
+				loginDialog->addCB();
+				_STATE->waitNotify.wait_for_signal(); // blocks until user interacts
+				loginDialog->delCB();
+				loginDialog->deldraw();
+				if (_STATE->destroyRequested.load()) {
+					return;
+				}
+				spinner.init();
+				spinner.addDraw();
+				continue;
+
+			}
+			else if (!inetConnect.serverReachable) {
+				break;
+			}
+			else {
+				std::string title = "First run detected. Please sign in using the same credentials from our website. Your information is protected with a secure connection. After logging in, your details are safely stored locally on your device.";
+				if (!ls.autoLogin()) {
+					auto connected = false;
+					while (!connected && !_STATE->destroyRequested.load()) {
+						std::string email, password;
+						auto loginDialog = std::make_unique<tsl::graphics::DynamicDialog>(_STATE);
+						loginDialog->setTitle(title);
+						loginDialog->addInputField("Email:");
+						loginDialog->addInputField("Password:"); // password field
+						loginDialog->setButtonMode(tsl::graphics::DynamicDialog::ButtonMode::OK_ONLY);
+						loginDialog->onCompleteCallback = [&](const tsl::graphics::DynamicDialog::DialogResult& result) {
+							if (result.confirmed) {
+								email = result.namedValues.at("Email:");
+								password = result.namedValues.at("Password:");
+								if (!password.empty() && !email.empty())
+									_STATE->waitNotify.wake_thread(this_thread); // unblocks
+							}
+							};
+						loginDialog->init();
+						loginDialog->addDraw();
+						loginDialog->addCB();
+						_STATE->waitNotify.wait_for_signal(); // blocks until user interacts
+						loginDialog->deldraw();
+						loginDialog->delCB();
+						if (_STATE->destroyRequested.load()) {
+							return;
+						}
+						spinner.init();
+						spinner.addDraw();
+						if (!ls.loginAndSave(email, password)) {
+							spinner.deldraw();
+							title = "Wrong email or username. Please try again.";
+							continue;
+						}
+						else {
+
+
+							auto v = ls.validateProductDetailed(2);
+							spinner.deldraw();
+
+							if (v.success) {
+								connected = true;
+								showToast(_STATE, v.status.c_str());
+								return;
+							}
+							else {
+								if (v.statusCode != 200)break;
+								loginDialog = std::make_unique<tsl::graphics::DynamicDialog>(_STATE);
+								loginDialog->setTitle(v.status);
+								loginDialog->setStaticMode(true);
+								loginDialog->setButtonMode(tsl::graphics::DynamicDialog::ButtonMode::NO_BUTTONS);
+
+								loginDialog->init();
+								loginDialog->addDraw();
+								loginDialog->addCB();
+								_STATE->waitNotify.wait_for_signal(); // blocks until user interacts
+								loginDialog->deldraw();
+								loginDialog->delCB();
+								if (_STATE->destroyRequested.load()) {
+									return;
+								}
+							}
+						}
+					}
+				}
+				else {
+					auto v = ls.validateProductDetailed(2);
+					if (v.success) {
+						if (v.hasTrial)
+							showToast(_STATE, v.status.c_str());
+						return;
+					}
+					else if (v.statusCode == 200) {
+						auto loginDialog = std::make_unique<tsl::graphics::DynamicDialog>(_STATE);
+						loginDialog->setTitle(v.status);
+						loginDialog->setStaticMode(true);
+						loginDialog->setButtonMode(tsl::graphics::DynamicDialog::ButtonMode::NO_BUTTONS);
+						loginDialog->init();
+						loginDialog->addDraw();
+						loginDialog->addCB();
+						_STATE->waitNotify.wait_for_signal(); // blocks until user interacts
+						loginDialog->deldraw();
+						loginDialog->delCB();
+						if (_STATE->destroyRequested.load()) {
+							return;
+						}
+
+					}
+				}
+			}
+		}
+
+	}
+
+	while (true) {
+		auto inetConnect = ls.checkConnectivity();
+		if (inetConnect.internetAvailable && inetConnect.serverReachable) {
+			auto connected = ls.autoLogin();
+			std::string title("Please reenter your login information");
+			while (!connected && !_STATE->destroyRequested.load()) {
+				std::string email, password;
+				auto loginDialog = std::make_unique<tsl::graphics::DynamicDialog>(_STATE);
+				loginDialog->setTitle(title);
+				loginDialog->addInputField("Email:");
+				loginDialog->addInputField("Password:"); // password field
+				loginDialog->onCompleteCallback = [&](const tsl::graphics::DynamicDialog::DialogResult& result) {
+					if (result.confirmed) {
+						email = result.namedValues.at("Email:");
+						password = result.namedValues.at("Password:");
+						if (!password.empty() && !email.empty())
+							_STATE->waitNotify.wake_thread(this_thread); // unblocks
+					}
+					};
+				loginDialog->init();
+				loginDialog->addDraw();
+				loginDialog->addCB();
+				_STATE->waitNotify.wait_for_signal(); // blocks until user interacts
+				loginDialog->deldraw();
+				loginDialog->delCB();
+				if (_STATE->destroyRequested.load()) {
+					return;
+				}
+				spinner.init();
+				spinner.addDraw();
+				if (!ls.loginAndSave(email, password)) {
+					title = "Wrong email or username. Please try again.";
+					spinner.deldraw();
+					continue;
+				}
+				spinner.deldraw();
+				break;
+			};
+
+			{
+				auto v = ls.validateProductDetailed(2, [_STATE](const std::string& result) {
+					LOGE(result.c_str());
+					});
+
+				if (v.success) {
+					if (v.hasTrial)
+						showToast(_STATE, v.status.c_str());
+					return;
+				}
+				else {
+					if (v.statusCode != 200)break;
+					auto loginDialog = std::make_unique<tsl::graphics::DynamicDialog>(_STATE);
+					loginDialog->setTitle(v.status);
+					loginDialog->setStaticMode(true);
+					loginDialog->setButtonMode(tsl::graphics::DynamicDialog::ButtonMode::NO_BUTTONS);
+					loginDialog->init();
+					loginDialog->addDraw();
+					loginDialog->addCB();
+					_STATE->waitNotify.wait_for_signal(); // blocks until user interacts
+					loginDialog->deldraw();
+					loginDialog->delCB();
+					if (_STATE->destroyRequested.load()) {
+						return;
+					}
+				}
+
+			}
+
+		}
+		else {
+			_STATE->waitNotify.wait_for_signal(5 * 60 * 1000); // blocks until user interacts
+			if (_STATE->destroyRequested.load()) {
+				return;
+			}
+
+		}
+	}
+
+
+};

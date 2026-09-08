@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:background="@drawable/rounded_corner">
+        <TextView
+            android:id="@+id/path"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:paddingEnd="8dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:paddingStart="8dp"
+            android:text="Path"
+            android:textColor="@color/white"
+            android:textSize="16sp" />
+        <ImageButton
+            android:id="@+id/dirnew"
+            android:layout_weight = "0"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/selector_icon"
+            android:gravity="start"
+            android:paddingBottom="12dp"
+            android:paddingTop="12dp"
+            android:textColor="@color/white"
+            android:src="@drawable/ic_create_new_folder_black_24dp" />
+        <ImageButton
+            android:id="@+id/dirup"
+            android:layout_weight = "0"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/selector_icon"
+            android:gravity="start"
+            android:paddingBottom="12dp"
+            android:paddingTop="12dp"
+            android:textColor="@color/white"
+            android:src="@drawable/ic_arrow_upward_black_24dp" />
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/storageview"
+        android:baselineAligned="false"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:background="@color/blackblack"
+        android:gravity="center"
+        android:orientation="horizontal">
+        <LinearLayout
+            android:id="@+id/internal_storage"
+            android:orientation="vertical"
+            android:layout_weight = "1"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center"
+            android:background="@drawable/selector_rowfile">
+            <ImageView
+                android:layout_weight="0"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_margin="12dp"
+                android:gravity="center"
+                android:src="@drawable/ic_storage_black_24dp"/>
+            <TextView
+                android:id="@+id/internal_storage_free_space"
+                android:layout_weight="1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="10 MiB"
+                android:background="@color/colorBackground2"
+                android:textColor="@android:color/primary_text_dark" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/external_storage"
+            android:orientation="vertical"
+            android:layout_weight = "1"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center"
+            android:focusable="false"
+            android:background="@drawable/selector_rowfile">
+            <ImageView
+                android:layout_weight="0"
+                android:layout_margin="12dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:gravity="center"
+                android:src="@drawable/ic_sd_card_black_24dp"/>
+            <TextView
+                android:id="@+id/external_storage_free_space"
+                android:layout_weight="1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/colorBackground2"
+                android:gravity="center"
+                android:text="10 MiB"
+                android:textColor="@color/white" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:id="@+id/seperator_storage"
+        style="@style/Seperator" />
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:background="@color/colorBackground2">
+        <me.rocks.grainstorm.MyRecyclerView
+            android:id="@+id/filebrowser_recyclerview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            />
+
+            <TextView
+                android:id="@+id/empty_folder"
+                android:gravity="center"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:textSize="16sp"
+                android:text="Folder Empty"/>
+    </LinearLayout>
+
+
+
+    <LinearLayout
+        android:id="@+id/filebrowserbottomcontrol"
+        android:layout_weight="0"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+        <View style="@style/Seperator" />
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:background="@color/blackblack"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp">
+
+            <Button
+                android:id="@+id/filebrowsercancel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_centerInParent="true"
+                android:onClick="onClick"
+                android:text="Cancel" />
+
+            <Button
+                android:id="@+id/filebrowserok"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerInParent="true"
+                android:onClick="onClick"
+                android:text="Choose" />
+        </RelativeLayout>
+    </LinearLayout>
+</LinearLayout>

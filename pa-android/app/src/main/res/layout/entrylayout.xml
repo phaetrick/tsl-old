@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center">
+    <TextView
+        android:id="@+id/entersynth"
+        style="@style/entryitemstyle"
+        android:text="Synth"/>
+    <TextView
+        android:id="@+id/entersettings"
+        style="@style/entryitemstyle"
+        android:text="Settings"/>
+    <TextView
+        android:id="@+id/enterinstructions"
+        style="@style/entryitemstyle"
+        android:text="Instructions"/>
+    <TextView
+        android:id="@+id/enterchangelog"
+        style="@style/entryitemstyle"
+        android:text="Changelog"/>
+    <TextView
+        android:id="@+id/entereula"
+        style="@style/entryitemstyle"
+        android:text="EULA"/>
+    <TextView
+        android:id="@+id/enteross"
+        style="@style/entryitemstyle"
+        android:text="Open Source Software"/>
+    <TextView
+        android:id="@+id/enterpro"
+        style="@style/entryitemstyle"
+        android:text="Pro Upgrade"/>
+</LinearLayout>

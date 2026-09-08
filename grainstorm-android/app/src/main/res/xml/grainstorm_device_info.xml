@@ -1,0 +1,5 @@
+<devices>
+    <device manufacturer="The Secret Laboratory" product="Grainstorm">
+        <input-port name="input" />
+    </device>
+</devices>

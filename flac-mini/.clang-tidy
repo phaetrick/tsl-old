@@ -1,0 +1,5 @@
+# Vendored third-party source -- not ours to lint.
+# Disables every clang-tidy check for this subtree; the root CPP-New/.clang-tidy
+# does not apply here (sub-configs replace the parent unless InheritParentConfig).
+Checks: -*
+HeaderFilterRegex: $^

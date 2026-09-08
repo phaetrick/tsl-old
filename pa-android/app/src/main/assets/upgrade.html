@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="stylesheet" href="txtstyle.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Voltaic Lifetime</title>
+    <!-- This page is the WebView in InAppPurchases (inappbilling.xml). The activity
+         already draws the "Voltaic Lifetime" title bar above it and the Purchase
+         button + price bar below it, so the page deliberately carries neither a
+         title nor a call to action - it is only the middle, scrolling part.
+
+         Everyone who reaches this page has ALREADY been playing the full
+         instrument, for up to fifteen days. So the page does not describe the
+         instrument and does not list what the trial included - that is telling
+         people what they have had in their hands for a fortnight. It says only
+         what the money changes, which is that the limit goes.
+
+         It also does not mention the ten-minute fallback sessions: those happen
+         only when the device cannot reach us to start or check a trial, and
+         explaining an error state on a sales page buys confusion rather than
+         honesty. The Settings row says it plainly at the moment it applies. -->
+    <style>
+        :root {
+            --accent: #ff9700;
+            --card: #0e0e10;
+            --line: #26262b;
+            --muted: #9a9aa2;
+        }
+
+        body {
+            margin: 0;
+            /* The bottom bar is a separate view, but a little tail keeps the last
+               line clear of it while scrolling. */
+            padding: 22px 18px 34px;
+            -webkit-text-size-adjust: 100%;
+            /* txtstyle.css sets no family, which leaves the WebView on its default
+               serif. State it, so the page matches the app rather than the browser. */
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .wrap {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        /* The page's own title is the wordmark alone. The activity's TextView is
+           hidden so this can carry the logo -- a TextView cannot.
+
+           Cropped from banner-lightning-2048x1000.webp: the content sits at
+           x 480..1602, y 350..648, so a centred 1176x320 crop clears the V's
+           glow on every side without clipping the C. Capped rather than left at
+           a percentage, or a wide viewport blows it up. */
+        .pagetitle {
+            margin: 0 0 26px;
+            text-align: center;
+            line-height: 1;
+        }
+
+        .wordmark {
+            display: block;
+            width: 35%;
+            max-width: 140px;
+            height: auto;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--accent);
+            border-radius: 10px;
+            padding: 16px 16px 4px;
+            margin: 0 0 18px;
+        }
+
+        .card h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 0 10px;
+            font-size: 1.12em;
+            font-weight: 600;
+            line-height: 130%;
+        }
+
+        .card p {
+            margin: 0 0 12px;
+            line-height: 155%;
+        }
+
+        .glyph {
+            flex: 0 0 auto;
+            width: 22px;
+            height: 22px;
+        }
+
+        .rec-dot {
+            fill: #ff3b30;
+        }
+
+        .specs {
+            list-style: none;
+            margin: 0 0 12px;
+            padding: 0;
+            border-top: 1px solid var(--line);
+        }
+
+        /* Label above value, not beside it. A phone-width key column leaves the
+           format list breaking across three ragged lines. */
+        .specs li {
+            display: block;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--line);
+            line-height: 140%;
+            font-size: 0.94em;
+        }
+
+        .specs .k {
+            display: block;
+            margin-bottom: 3px;
+            color: var(--muted);
+            font-size: 0.86em;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+        }
+
+        @media (min-width: 560px) {
+            .specs li {
+                display: flex;
+                gap: 14px;
+                align-items: baseline;
+            }
+
+            .specs .k {
+                flex: 0 0 30%;
+                margin-bottom: 0;
+            }
+        }
+
+        figure {
+            margin: 4px 0 16px;
+        }
+
+        figure img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+        }
+
+        figcaption {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 0.88em;
+            line-height: 145%;
+        }
+
+        .free-note {
+            color: var(--muted);
+            font-size: 0.94em;
+            border-left: 2px solid var(--line);
+            padding-left: 12px;
+            margin: 0 0 12px;
+        }
+
+        .forever {
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin: 0 0 26px;
+            line-height: 150%;
+        }
+
+        .forever b,
+        .card b {
+            color: var(--accent);
+        }
+
+        .fine {
+            border-top: 1px solid var(--line);
+            padding-top: 18px;
+            color: var(--muted);
+            font-size: 0.9em;
+        }
+
+        .fine h3 {
+            margin: 0 0 6px;
+            font-size: 0.9em;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #d8d8dc;
+        }
+
+        .fine p {
+            margin: 0 0 16px;
+            line-height: 155%;
+        }
+
+        a {
+            color: var(--accent);
+        }
+    </style>
+</head>
+
+<body>
+<div class="wrap">
+
+    <h1 class="pagetitle"><img class="wordmark" src="wordmark.png" alt="Voltaic"></h1>
+
+    <div class="card">
+        <h2>
+            <svg class="glyph" viewBox="0 0 22 22" fill="none" stroke="currentColor"
+                 stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 10V7a5 5 0 0 1 9.6-2"/>
+                <rect x="4.5" y="10" width="13" height="8.5" rx="2"/>
+            </svg>
+            Lifetime Access
+        </h2>
+        <p>
+            <b>One payment, no subscription.</b> It covers every device on your
+            Google account, and every version we release from here.
+        </p>
+    </div>
+
+    <div class="fine">
+        <h3>If you change your mind</h3>
+        <p>
+            Not happy with it?
+            <a href="https://www.thesecretlaboratory.com/help/contact">Contact us</a> with
+            your order id within a week and we will refund you.
+        </p>
+
+        <h3>Payment</h3>
+        <p>
+            All transaction details are handled by Google. No personal information, such as
+            your name or card details, is sent to us.
+        </p>
+
+        <h3>Other devices</h3>
+        <p>
+            If you plan to run Voltaic on another device, it needs Android 7.0 or newer and
+            support for OpenGL ES 3.0.
+        </p>
+    </div>
+
+</div>
+</body>
+
+</html>

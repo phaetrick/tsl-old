@@ -1,0 +1,50 @@
+<plist version="1.0">
+<dict>
+    <key>AudioComponents</key>
+    <array>
+       <dict>
+          <key>name</key>
+          <string>The Secret Laboratory: Grainstorm</string>
+          <key>description</key>
+          <string>Grainstorm Synth Effect AU</string>
+          <key>factoryFunction</key>
+          <string>IPlugEffect_Factory</string>
+          <key>manufacturer</key>
+          <string>TSLa</string>
+          <key>subtype</key>
+          <string>Ipef</string>
+          <key>type</key>
+          <string>aumf</string> <key>version</key>
+          <integer>65536</integer>
+          <key>sandboxSafe</key>
+          <true/>
+       </dict>
+    </array>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>English</string>
+    <key>CFBundleExecutable</key>
+    <string>Grainstorm</string>
+    <key>CFBundleGetInfoString</key>
+    <string>Grainstorm v1.0.0 Copyright 2025 The Secret Laboratory</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.thesecretlaboratory.audiounit.Grainstorm</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Grainstorm</string>
+    <key>CFBundlePackageType</key>
+    <string>BNDL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleSignature</key>
+    <string>Ipef</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CSResourcesFileMapped</key>
+    <true/>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.11.0</string>
+    <key>NSPrincipalClass</key>
+    <string>IPlugEffect_View</string>
+</dict>
+</plist>

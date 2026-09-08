@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+        <!-- This PreferenceScreen tag sends the user to a new fragment of
+             preferences.  If running in a large screen, they can be embedded
+	inside of the overall preferences UI. -->
+<PreferenceCategory android:title="Settings" android:key="settings">
+        <PreferenceScreen
+            android:key="audioscreen"
+		android:title="Audio">
+	<PreferenceCategory
+		android:key="audio"
+        android:title="Audio">
+        <ListPreference
+            android:key="@string/bufsize3"
+            android:entries="@array/bufsize_entries"
+            android:entryValues="@array/bufsize_values"
+            android:defaultValue="4"
+            android:title="Buffersize"
+            />
+        <ListPreference
+            android:title="Channel Layout"
+            android:key="@string/channels"
+            android:entries="@array/channel_layout_entries"
+            android:entryValues="@array/channel_layout_values"
+            android:defaultValue = "1"/>
+        <CheckBoxPreference
+            android:title="Use AAudio Audioengine"
+            android:summary="Smaller buffersizes = lower latency may be possible. Experimental."
+            android:key="@string/useaaudio"/>
+    </PreferenceCategory>
+	</PreferenceScreen>
+	<PreferenceScreen
+		android:title="Microphone"
+		android:key="mic screen">
+    <PreferenceCategory android:title="Microphone">
+        <me.rocks.grainstorm.MyCustomRecordingpresetListPreference
+            android:title="Preset"
+            android:key="@string/audiosource"
+            android:defaultValue="1"
+            tools:targetApi="24" />
+        <CheckBoxPreference
+            android:title="Write into File"
+            android:key="@string/writemic"
+            android:defaultValue="false" />
+        <CheckBoxPreference
+		android:title="Pause Playback when Active"
+            android:key="@string/pauseplayback"
+            android:defaultValue="true" />
+</PreferenceCategory>
+</PreferenceScreen>
+<PreferenceScreen
+	android:title="Recording"
+	android:key="rec screen">
+    <PreferenceCategory android:title="Recording">
+		android:key="recording"
+        <ListPreference
+            android:title="Audio Format"
+            android:key="@string/recordingformat"
+            android:entries="@array/recording_format_entries"
+            android:entryValues="@array/recording_format_values"
+            android:defaultValue = "0"/>
+        <CheckBoxPreference
+            android:title="Ask for Filename on Finish"
+            android:key="@string/askname"
+            android:defaultValue="false"/>
+        <Preference android:title="Output Folder"
+            android:key="@string/recordingdirectory"/>
+</PreferenceCategory>
+</PreferenceScreen>
+<PreferenceScreen
+	android:title="MIDI"
+	android:key="midi screen">
+    <PreferenceCategory android:title="MIDI">
+        <Preference
+            android:title="@string/midisender"
+            android:key="@string/midisender"/>
+</PreferenceCategory>
+</PreferenceScreen>
+<PreferenceScreen
+	android:title="General"
+	android:key="general settings">
+    <PreferenceCategory android:title="General">
+	    <CheckBoxPreference
+        android:title="Copy Audiofiles Before Decoding" android:summary="Enable this if there are problems with decoding certain audioformats. File is copied to a temporary location and deleted after decoding. Not recommended for very large files." android:defaultValue="false" android:key="@string/filepicker"/>
+
+	    <CheckBoxPreference
+	android:title="Always Keep Screen On" android:defaultValue="false" android:key="@string/screenonflag"/>
+<CheckBoxPreference
+		android:title="Power On at Start"
+		android:key="@string/startPoweredOn"
+		android:defaultValue="true"/>
+<CheckBoxPreference
+	android:title="Run as Foreground Service"
+	android:summary="Keeps the synth running in the background, with a notification. When off, the synth stops when the app is swiped away."
+		android:key="@string/runAsForeground"
+		android:defaultValue="true"/>
+</PreferenceCategory>
+</PreferenceScreen>
+<PreferenceScreen
+	android:title="AI Sound Generation"
+	android:key="ai screen">
+    <PreferenceCategory android:title="AI Sound Generation">
+        <Preference
+            android:title="AI models"
+            android:summary="You need to download at least one. Please make sure you have enough space left on your device - a download over Wi-Fi is recommended. Sound generation happens on your device. Your prompts never leave the phone and no server is involved - it works fully offline. No accounts, no costs, no limits: generate as many sounds as you like. The only download is the model itself, once."
+            android:key="ai_about"
+            android:selectable="false"/>
+        <Preference
+            android:title="How to use it"
+            android:summary="Open a track's menu and choose RECORD AI-&gt;TRACK, then describe the sound. A full phrase works much better than a single word: try 'rusty metal hinge creaking, long resonant tail' rather than 'hinge'. The result lands on the track, ready to granulate. The slider under the prompt sets the length, 1 to 60 seconds. Generating takes about a minute for 10 seconds of sound on a typical phone, longer sounds take proportionally longer; not happy with a result, simply generate again. Closing the progress window cancels. Start a prompt with m: to use the Music model instead of SFX."
+            android:key="ai_howto"
+            android:selectable="false"/>
+        <Preference
+            android:title="SFX Model (default)"
+            android:summary="Everyday sounds, effects, hits and textures - what RECORD AI-&gt;TRACK uses unless a prompt starts with m: - Download size: 1.7 GB."
+            android:key="ai_model_sfx"/>
+        <Preference
+            android:title="Music Model (m: prefix)"
+            android:summary="Melodic material - riffs, chords and instruments. Used when a prompt starts with m: - Download size: 1.7 GB."
+            android:key="ai_model_music"/>
+    </PreferenceCategory>
+</PreferenceScreen>
+<PreferenceScreen
+	android:title="Presets"
+	android:key="preset screen">
+    <PreferenceCategory android:title="Presets">
+		android:key="presets"
+        <CheckBoxPreference
+            android:title="Save Audio"
+	android:summary="Saves audio on track with preset in FLAC 16-bit format. Useful if you want to reuse presets after uninstall, on other devices or even share presets with other users. This will grow the preset size. Use with care. You probably should set a custom preset folder before enabling this."
+            android:key="@string/saveaudio"
+            android:defaultValue="false"/>
+         <CheckBoxPreference
+            android:title="Use System Folder for Presets"
+	android:summary="If disabled and a custom preset folder is set, presets will be saved to this folder."
+            android:key="@string/systemFolderForPresets"
+            android:defaultValue="true"/>
+        <Preference android:title="Set Preset Folder"
+            android:key="@string/presetdirectory"/>
+		<Preference android:title="Share Presets" >
+			<intent android:action="android.intent.action.VIEW"
+				android:data="https://rocks.me/forum/grainstorm/presets.15" />
+		</Preference>
+
+	</PreferenceCategory>
+</PreferenceScreen>
+</PreferenceCategory>
+<PreferenceCategory android:title="Misc" android:key="misc">
+<Preference android:title="Upgrade" android:key="@string/upgrade"/>
+<Preference android:title="Instructions" android:key="@string/instructions"/>
+<Preference android:title="Changelog" android:key="@string/changelog"/>
+<Preference android:title="EULA" android:key="@string/eula"/>
+<Preference android:title="Open Source Software" android:key="@string/oss"/>
+        />
+</PreferenceCategory>
+
+</PreferenceScreen>

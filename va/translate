@@ -1,0 +1,279 @@
+compressor.cpp:312:    canvas->save();
+compressor.cpp:313:    canvas->clipPath(path);
+compressor.cpp:317:    canvas->translate(view->startx, view->starty);
+compressor.cpp:320:        canvas->drawLine(width / 60.f * (60 - ABS(x)), height - (height / 60 * (60 - ABS(x) +
+compressor.cpp:337:    canvas->restore();
+compressor.cpp:341:    canvas->drawRect(
+meter.cpp:99:    canvas->save();
+meter.cpp:100:    canvas->translate(view->startx, view->starty);
+meter.cpp:104:    canvas->drawRect(SkRect::MakeIWH((int) view->width, (int) (view->height)), paint);
+meter.cpp:123:        canvas->drawRect(SkRect::MakeIWH((int) heightredleft, (int) (view->height * .5)), paint);
+meter.cpp:127:    canvas->drawRect(SkRect::MakeIWH((int) (heightyellowleft), (int) (view->height * .5)), paint);
+meter.cpp:130:    canvas->drawRect(SkRect::MakeIWH((int) heightgreenleft, (int) (view->height * .5)), paint);
+meter.cpp:140:        canvas->drawLine(width_neg * DBTOPERCENTAGE(peakleft), 0, width_neg * DBTOPERCENTAGE(peakleft), view->height * .5f,  paint);
+meter.cpp:155:        canvas->drawRect(SkRect::MakeXYWH(0, view->height * .5f, heightredright, view->height * .5f), paint);
+meter.cpp:159:    canvas->drawRect(SkRect::MakeXYWH(0, view->height * .5f, heightyellowright, view->height * .5f), paint);
+meter.cpp:162:    canvas->drawRect(SkRect::MakeXYWH(0, view->height * .5f, heightgreenright, view->height * .5f), paint);
+meter.cpp:172:        canvas->drawLine(width_neg * DBTOPERCENTAGE(peakright), view->height * .5f, width_neg * DBTOPERCENTAGE(peakright), view->height,  paint);
+meter.cpp:182:                canvas->drawLine(width_neg * width_coeff, i * draw_offset, width_neg * width_coeff, (i + 1) * draw_offset,  paint);
+meter.cpp:187:        canvas->drawLine(width_neg * width_coeff, 0, width_neg * width_coeff,  view->height, paint);
+meter.cpp:200:            canvas->drawLine(width_neg * width_coeff, i * draw_offset, width_neg * width_coeff,  (i + 1) * draw_offset, paint);
+meter.cpp:203:        canvas->drawLine(width_neg * width_coeff,0, width_neg * width_coeff,  view->height, paint);
+meter.cpp:206:    canvas->drawLine(0,  view->height * .5f, view->width,  view->height * .5f, paint);
+meter.cpp:208:    canvas->restore();
+slider.cpp:105:    canvas->save();
+slider.cpp:106:    canvas->translate(view->startx, view->starty);
+slider.cpp:108:    canvas->drawLine(0, 1, 0, view->height - 1, paint);
+slider.cpp:109:    canvas->drawRect(SkRect::MakeXYWH(s->posx_text, (view->height - View::textsize2) * .5f, s->width_text, View::textsize2), paint);
+slider.cpp:111:    canvas->drawLine(s->startx_slider, s->starty_slider, offset, s->starty_slider, paint);
+slider.cpp:113:    canvas->drawLine(offset, s->starty_slider, s->stopx_slider, s->starty_slider, paint);
+slider.cpp:114:    canvas->drawLine(offset, 1, offset, view->height - 1, paint);
+slider.cpp:118:        canvas->drawRoundRect(SkRect::MakeXYWH(s->posx_text, (view->height - View::textsize2) * .5f, s->width_text, View::textsize2), View::textsize2 *.1f, View::textsize2 * .1f, paint);
+slider.cpp:121:    canvas->drawSimpleText(p->miditargets[view->id].name, strlen(p->miditargets[view->id].name), SkTextEncoding::kUTF8, s->posx_text, s->posy_text, font, paint);
+slider.cpp:123:    canvas->restore();
+button.cpp:137:        canvas->drawRoundRect(
+button.cpp:252:        canvas->drawRoundRect(
+button.cpp:294:        canvas->drawRoundRect(
+button.cpp:337:        canvas->drawRoundRect(
+button.cpp:381:    canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, view->startx + startx,
+button.cpp:401:    canvas->save();
+button.cpp:402:    canvas->translate(view->startx, view->starty);
+button.cpp:405:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, startx_pos, starty_pos,
+button.cpp:409:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, startx_pos, starty_pos,
+button.cpp:417:        canvas->drawRoundRect(SkRect::MakeXYWH(startx_rect, starty_rect, width_rect, height_rect),
+button.cpp:421:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, startx_pos, starty_pos,
+button.cpp:429:        canvas->drawRoundRect(SkRect::MakeXYWH(startx_rect, starty_rect, width_rect, height_rect),
+button.cpp:432:    canvas->restore();
+button.cpp:452:    canvas->save();
+button.cpp:453:    canvas->translate(view->startx, view->starty);
+button.cpp:459:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, startx_pos, starty_pos,
+button.cpp:469:        canvas->drawRoundRect(SkRect::MakeXYWH(startx_rect, starty_rect, width_rect, height_rect),
+button.cpp:474:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, startx_pos, starty_pos,
+button.cpp:480:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, startx_pos, starty_pos,
+button.cpp:488:        canvas->drawRoundRect(SkRect::MakeXYWH(startx_rect, starty_rect, width_rect, height_rect),
+button.cpp:491:    canvas->restore();
+button.cpp:522:            canvas->drawRoundRect(
+button.cpp:553:    canvas->save();
+button.cpp:554:    canvas->translate(view->startx, view->starty);
+button.cpp:616:    canvas->drawPath(path, paint);
+button.cpp:617:    canvas->restore();
+button.cpp:644:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, xpos, ypos, font, paint);
+button.cpp:648:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, xpos, ypos, font, paint);
+button.cpp:652:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, xpos, ypos, font, paint);
+button.cpp:687:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, xpos, ypos, font, paint);
+button.cpp:691:        canvas->drawRoundRect(
+button.cpp:697:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, xpos, ypos, font, paint);
+button.cpp:701:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, xpos, ypos, font, paint);
+button.cpp:723:    canvas->save();
+button.cpp:724:    // canvas->clipPath(path);
+button.cpp:737:        canvas->translate(view->startx, view->starty);
+button.cpp:739:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, xpos, ypos, font, paint);
+button.cpp:750:        canvas->translate(view->startx, view->starty);
+button.cpp:752:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, xpos, ypos, font, paint);
+button.cpp:762:        canvas->translate(view->startx, view->starty);
+button.cpp:767:        canvas->drawRect(
+button.cpp:771:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, xpos, ypos, font, paint);
+button.cpp:788:        canvas->drawPath(path, paint);
+button.cpp:790:        //canvas->drawRoundRect(SkRect::MakeXYWH(startx_rect, starty_rect, width_rect, height_rect),
+button.cpp:794:    canvas->restore();
+button.cpp:812:    canvas->save();
+button.cpp:813:    canvas->translate(view->startx, view->starty);
+button.cpp:817:        canvas->drawRect(SkRect::MakeXYWH(0, 0, view->width, view->height), paint);
+button.cpp:820:        canvas->drawRect(SkRect::MakeXYWH(0, 0, view->width, view->height), paint);
+button.cpp:822:        //canvas->drawRect(SkRect::MakeXYWH(view->width - view->width / 2.5f, 0, view->width / 2.5f,
+button.cpp:826:        canvas->drawRect(SkRect::MakeXYWH(0, 0, view->width, view->height), paint);
+button.cpp:828:    canvas->restore();
+button.cpp:861:    canvas->save();
+button.cpp:862:    canvas->translate(view->startx, view->starty);
+button.cpp:864:    canvas->drawLine(0, offset, view->width, offset, paint);
+button.cpp:865:    canvas->restore();
+button.cpp:908:        canvas->drawRoundRect(
+button.cpp:923:    canvas->save();
+button.cpp:924:    canvas->translate(view->startx, view->starty);
+button.cpp:927:    canvas->clipPath(path);
+button.cpp:929:    canvas->drawCircle(cx, cy, r, paint);
+button.cpp:935:        canvas->drawCircle(cx + cosf(SkDegreesToRadians(i)) * rcircles,
+button.cpp:939:    //canvas->drawCircle(view->width / 2. + cosf(SkDegreesToRadians(i)) *rcircles, view->height / 2. + sinf(SkDegreesToRadians(i)) * rcircles, rcircles/5.f, paint);
+button.cpp:941:    canvas->drawRect(
+button.cpp:944:    canvas->restore();
+button.cpp:993:        canvas->drawRoundRect(
+button.cpp:1172:        canvas->drawRoundRect(
+callback:1369:slider.cpp:109:    canvas->drawRect(SkRect::MakeXYWH(s->posx_text, (view->height - View::textsize2) * .5f, s->width_text, View::textsize2), paint);
+callback:1373:slider.cpp:118:        canvas->drawRoundRect(SkRect::MakeXYWH(s->posx_text, (view->height - View::textsize2) * .5f, s->width_text, View::textsize2), View::textsize2 *.1f, View::textsize2 * .1f, paint);
+callback:1375:slider.cpp:121:    canvas->drawSimpleText(p->miditargets[view->id].name, strlen(p->miditargets[view->id].name), SkTextEncoding::kUTF8, s->posx_text, s->posy_text, font, paint);
+window.cpp:419:                        rendercanvas->save();
+window.cpp:420:                        rendercanvas->clipPath(path);
+window.cpp:422:                        rendercanvas->restore();
+window.cpp:433:                drawcanvas->drawImageRect(surface->makeImageSnapshot(),
+window.cpp:466:                    drawcanvas->drawImage(window.surface->makeImageSnapshot(), window.x, window.y);
+window.cpp:471:            drawcanvas->flush();
+Knob.cpp:170:    canvas->save();
+Knob.cpp:171:    canvas->translate(view->startx, view->starty);
+Knob.cpp:189:    canvas->drawArc(SkRect::MakeXYWH(startx_rect, starty_rect, radius * 2, radius * 2), -225,
+Knob.cpp:193:    canvas->drawArc(SkRect::MakeXYWH(startx_rect, starty_rect, radius * 2, radius * 2),
+Knob.cpp:218:    canvas->drawPath(path, paint);
+Knob.cpp:219:    canvas->restore();
+Knob.cpp:260:    canvas->save();
+Knob.cpp:261:    canvas->translate(view->startx, view->starty);
+Knob.cpp:265:    canvas->drawArc(SkRect::MakeXYWH(startx_rect, starty_rect, radius * 2, radius * 2), -225,
+Knob.cpp:270:    canvas->drawArc(SkRect::MakeXYWH(startx_rect, starty_rect, radius * 2, radius * 2),
+Knob.cpp:295:    canvas->drawPath(path, paint);
+Knob.cpp:296:    canvas->restore();
+checkbox.cpp:40:        canvas->drawRoundRect(
+checkbox.cpp:71:        canvas->drawRoundRect(
+checkbox.cpp:94:    canvas->save();
+checkbox.cpp:95:    canvas->clipPath(path);
+checkbox.cpp:104:    canvas->restore();
+checkbox.cpp:302:        canvas->drawRoundRect(
+view.cpp:1563:    canvas->drawRect(SkRect::MakeXYWH(v->startx, v->starty, v->width, v->height), paint);
+view.cpp:1570:    canvas->drawRect(SkRect::MakeXYWH(v->startx, v->starty, v->width, v->height), paint);
+frequencyresponce.cpp:61:    canvas->save();
+frequencyresponce.cpp:62:    canvas->translate(v->startx, v->starty);
+frequencyresponce.cpp:71:        canvas->drawSimpleText(dbpointstext[i], strlen(dbpointstext[i]), SkTextEncoding::kUTF8,
+frequencyresponce.cpp:77:    canvas->restore();
+frequencyresponce.cpp:89:    canvas->save();
+frequencyresponce.cpp:90:    canvas->translate(v->startx, v->starty);
+frequencyresponce.cpp:98:        canvas->drawSimpleText(frequencychars[i], strlen(frequencychars[i]), SkTextEncoding::kUTF8,
+frequencyresponce.cpp:103:    canvas->restore();
+frequencyresponce.cpp:497:    canvas->save();
+frequencyresponce.cpp:498:    canvas->translate(v->startx, v->starty);
+frequencyresponce.cpp:522:    canvas->drawPath(path, paint);
+frequencyresponce.cpp:544:            canvas->drawCircle(x, height - y * height, width * .05f, paint);
+frequencyresponce.cpp:547:            canvas->drawSimpleText(pointer_names[i], strlen(pointer_names[i]),
+frequencyresponce.cpp:556:    canvas->clipPath(path);
+frequencyresponce.cpp:605:    canvas->drawPath(path, paint);
+frequencyresponce.cpp:607:    canvas->restore();
+tools.cpp:611:    canvas->save();
+tools.cpp:612:    canvas->translate(v->startx, v->starty);
+tools.cpp:615:    canvas->drawRect(SkRect::MakeXYWH(0, 0, v->width, v->height), paint);
+tools.cpp:616:    canvas->restore();
+tools.cpp:621:    canvas->drawRect(
+main.cpp:356:    sk_sp<SkSurface> surface = SkSurface::MakeRenderTarget(drawcanvas->getGrContext(),
+main.cpp:401:                        rendercanvas->save();
+main.cpp:402:                        rendercanvas->clipPath(path);
+main.cpp:404:                        rendercanvas->restore();
+main.cpp:415:                drawcanvas->drawImageRect(surface->makeImageSnapshot(),
+main.cpp:447:                drawcanvas->drawImage(surface->makeImageSnapshot(), 0, 0);
+main.cpp:455:            drawcanvas->flush();
+selector.cpp:145:    canvas->save();
+selector.cpp:146:    canvas->translate(view->startx, view->starty);
+selector.cpp:147:    canvas->clear(SK_ColorTRANSPARENT);
+selector.cpp:149:    canvas->drawRect(SkRect::MakeXYWH(0, 0, view->width, view->height), paint);
+selector.cpp:153:    canvas->drawRect(SkRect::MakeXYWH(s->startxrect, s->startyrect, s->widthrect, s->heightrect),
+selector.cpp:159:    canvas->clipPath(path);
+selector.cpp:163:        canvas->drawSimpleText(el.name, strlen(el.name),
+selector.cpp:167:    canvas->restore();
+selector.cpp:500:    canvas->save();
+selector.cpp:501:    canvas->translate(view->startx, view->starty);
+selector.cpp:530:    canvas->drawPath(path, paint);
+selector.cpp:531:    canvas->restore();
+selector.cpp:729:    canvas->drawRoundRect(SkRect::MakeXYWH(view->startx, view->starty, view->width, view->height),
+textview.cpp:81:        canvas->drawRoundRect(SkRect::MakeXYWH(v->startx + xpos, v->starty + (v->height - fontsize) * .5f, bounds.width(), fontsize),
+textview.cpp:92:     canvas->drawSimpleText(tv->text, strlen(tv->text), SkTextEncoding::kUTF8, v->startx + xpos, v->starty + ypos, font, paint);
+textview.cpp:154:    //canvas->drawText(s.c_str(), s.size(), v->startx, v->starty, paint);
+textview.cpp:181:    //canvas->drawText(s.c_str(), s.size(), v->startx, v->starty, paint);
+plusminuscontrol.cpp:220:    canvas->save();
+plusminuscontrol.cpp:221:    canvas->translate(view->startx, view->starty + view->height * cc->height_title);
+plusminuscontrol.cpp:222:    canvas->drawSimpleText(output, strlen(output), SkTextEncoding::kUTF8, startx, starty, font,
+plusminuscontrol.cpp:224:    canvas->restore();
+plusminuscontrol.cpp:267:    canvas->save();
+plusminuscontrol.cpp:268:    canvas->translate(view->startx, view->starty + view->height * cc->height_title);
+plusminuscontrol.cpp:269:    canvas->drawSimpleText(output, strlen(output), SkTextEncoding::kUTF8, startx, starty, font,
+plusminuscontrol.cpp:271:    canvas->restore();
+plusminuscontrol.cpp:467:    canvas->save();
+plusminuscontrol.cpp:468:    canvas->translate(view->startx, view->starty + view->height * cc->height_title);
+plusminuscontrol.cpp:469:    canvas->drawSimpleText(output, strlen(output), SkTextEncoding::kUTF8, startx, starty, font,
+plusminuscontrol.cpp:471:    canvas->restore();
+plusminuscontrol.cpp:587:    canvas->save();
+plusminuscontrol.cpp:588:    canvas->translate(view->startx, view->starty + view->height * cc->height_title);
+plusminuscontrol.cpp:589:    canvas->drawSimpleText(output, strlen(output), SkTextEncoding::kUTF8, startx, starty, font,
+plusminuscontrol.cpp:591:    canvas->restore();
+waveform.cpp:423:    if (!canvas->getGrContext()) {
+waveform.cpp:431:    sk_sp<SkSurface> surface = SkSurface::MakeRenderTarget(canvas->getGrContext(),
+waveform.cpp:457:        canvas->drawImage(surfImage, i * 10, i * 10);
+waveform.cpp:677:    canvas->save();
+waveform.cpp:678:    canvas->translate(view->startx, view->starty);
+waveform.cpp:703:    canvas->drawPath(path, paint);
+waveform.cpp:706:    canvas->drawLine(0, pos_first, w, pos_first, paint);
+waveform.cpp:707:    canvas->drawLine(0, pos_second, w, pos_second, paint);
+waveform.cpp:712:        canvas->drawRect(SkRect::MakeXYWH(0, pos_grain, w, pos_grain + markersize), paint);
+waveform.cpp:715:        canvas->drawLine(0, pos_grain, w, pos_grain, paint);
+waveform.cpp:764:        canvas->drawLine(0, pos_grain, w, pos_grain, paint);
+waveform.cpp:766:        canvas->drawLine(0, pos_fade, w, pos_fade, paint);
+waveform.cpp:780:            canvas->drawLine(0, pos_bi, w, pos_bi, paint);
+waveform.cpp:782:            canvas->drawLine(0, pos_fade, w, pos_fade, paint);
+waveform.cpp:877:   canvas->restore();
+scrollview.cpp:67:    canvas->save();
+scrollview.cpp:68:    canvas->translate(view->startx, view->starty);
+scrollview.cpp:70:    canvas->drawLine(0, lh, view->width, lh, paint);
+scrollview.cpp:71:    canvas->drawLine(xoff, lw, xoff, view->height-lw,paint);
+scrollview.cpp:72:    canvas->drawLine(xoff+buttonwidth, lw, xoff+buttonwidth, view->height-lw,paint);
+scrollview.cpp:74:    //canvas->drawLine(lh, view->height-lh, view->width-lh, view->height-lh, paint);
+scrollview.cpp:75:   // canvas->drawRect(SkRect::MakeXYWH(xoff, lw, buttonwidth, view->height - lw), paint);
+scrollview.cpp:76:    canvas->restore();
+sequencer.cpp:25:    canvas->save();
+sequencer.cpp:26:    canvas->translate(v->startx, v->starty);
+sequencer.cpp:37:        canvas->drawSimpleText(nums[i], i > 8 ? 2 : 1, SkTextEncoding::kUTF8,
+sequencer.cpp:42:    canvas->restore();
+infopanel.cpp:134:    canvas->save();
+infopanel.cpp:135:    canvas->translate(view->startx, view->starty);
+infopanel.cpp:157:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, info->startx_pos1,
+infopanel.cpp:181:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, info->startx_pos2,
+infopanel.cpp:186:        canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, info->startx_pos1,
+infopanel.cpp:200:    canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, info->startx_pos3,
+infopanel.cpp:203:    canvas->restore();
+infopanel.cpp:215:    canvas->save();
+infopanel.cpp:216:    canvas->translate(view->startx, view->starty);
+infopanel.cpp:229:    canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, info->startx_rec,
+infopanel.cpp:231:    canvas->restore();
+infopanel.cpp:244:    canvas->save();
+infopanel.cpp:245:    canvas->translate(view->startx, view->starty);
+infopanel.cpp:258:    canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, info->startx_rec,
+infopanel.cpp:260:    canvas->restore();
+infopanel.cpp:274:    canvas->save();
+infopanel.cpp:275:    canvas->translate(view->startx, view->starty);
+infopanel.cpp:284:    canvas->drawRect(SkRect::MakeXYWH(0, SkDoubleToScalar(line_width),
+infopanel.cpp:294:    canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, info->startx_rec,
+infopanel.cpp:298:    canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, 0, info->starty_pos, font,
+infopanel.cpp:300:    canvas->restore();
+infopanel.cpp:320:    //canvas->drawText(text, strlen(text), info->startx_rec, info->starty_pos, paint);
+infopanel.cpp:342:    canvas->save();
+infopanel.cpp:343:    canvas->translate(view->startx, view->starty);
+infopanel.cpp:354:    canvas->drawSimpleText(text, strlen(text), SkTextEncoding::kUTF8, info->startx_rec,
+infopanel.cpp:356:    canvas->restore();
+envelope_window.cpp:65:    canvas->save();
+envelope_window.cpp:66:    canvas->translate(view->startx, view->starty);
+envelope_window.cpp:70:    canvas->clipPath(path);
+envelope_window.cpp:111:    canvas->drawPath(path, paint);
+envelope_window.cpp:114:    canvas->restore();
+envelope_window.cpp:118:    canvas->drawRect(
+envelope_window.cpp:597:    canvas->save();
+envelope_window.cpp:598:    canvas->translate(v->startx, v->starty);
+envelope_window.cpp:615:        canvas->drawSimpleText(frequencychars[i], strlen(frequencychars[i]), SkTextEncoding::kUTF8,
+envelope_window.cpp:621:    canvas->restore();
+envelope_window.cpp:632:    canvas->save();
+envelope_window.cpp:633:    canvas->translate(v->startx, v->starty);
+envelope_window.cpp:653:    canvas->drawPath(path, paint);
+envelope_window.cpp:654:    canvas->restore();
+envelope_window.cpp:662:    canvas->save();
+envelope_window.cpp:663:    canvas->translate(v->startx, v->starty);
+envelope_window.cpp:682:        canvas->drawSimpleText(frequencycharssd2[i], strlen(frequencycharssd2[i]),
+envelope_window.cpp:690:    canvas->restore();
+envelope_window.cpp:700:    canvas->save();
+envelope_window.cpp:701:    canvas->translate(v->startx, v->starty);
+envelope_window.cpp:724:    canvas->drawPath(path, paint);
+envelope_window.cpp:725:    canvas->restore();
+envelope_window.cpp:735:    canvas->save();
+envelope_window.cpp:736:    canvas->translate(v->startx, v->starty);
+envelope_window.cpp:756:    canvas->drawPath(path, paint);
+envelope_window.cpp:757:    canvas->restore();
+envelope_window.cpp:769:    canvas->save();
+envelope_window.cpp:770:    canvas->translate(v->startx, v->starty);
+envelope_window.cpp:810:    canvas->drawPath(path, paint);
+envelope_window.cpp:820:        canvas->drawCircle(xx[i]->load() * w, h - yy[i]->load() * h, w * .05f, paint);
+envelope_window.cpp:824:    canvas->restore();
+envelope_window.cpp:1320:    canvas->save();
+envelope_window.cpp:1321:    canvas->translate(v->startx, v->starty);
+envelope_window.cpp:1364:    canvas->drawPath(path, paint);
+envelope_window.cpp:1374:        canvas->drawCircle(xx[i]->load() * w, h - vecy[i].load() * h, w * .05f, paint);
+envelope_window.cpp:1378:    canvas->restore();

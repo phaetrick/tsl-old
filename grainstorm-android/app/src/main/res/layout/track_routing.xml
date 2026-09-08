@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/dialogParentStyle"
+    android:id="@+id/track_routing_root">
+
+        <TextView
+            android:id="@+id/title"
+            android:title="TRACK INPUT ROUTING"
+            style="@style/SettingsTextviewTitle" />
+
+        <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="start"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/radiobuttontrack1"
+                style="@style/radioButtonStyle"
+
+                android:onClick="onRadioButtonClicked"
+                android:text="TRACK1" />
+
+            <RadioButton
+                android:id="@+id/radiobuttontrack2"
+                style="@style/radioButtonStyle"
+
+                android:onClick="onRadioButtonClicked"
+                android:text="TRACK2" />
+
+            <RadioButton
+                android:id="@+id/radiobuttontrack3"
+                style="@style/radioButtonStyle"
+
+                android:onClick="onRadioButtonClicked"
+                android:text="TRACK3" />
+
+            <RadioButton
+                android:id="@+id/radiobuttontrack4"
+                style="@style/radioButtonStyle"
+
+                android:onClick="onRadioButtonClicked"
+                android:text="TRACK4" />
+        </RadioGroup>
+</LinearLayout>

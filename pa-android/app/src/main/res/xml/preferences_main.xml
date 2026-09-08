@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android">
+        <!-- This PreferenceScreen tag sends the user to a new fragment of
+             preferences.  If running in a large screen, they can be embedded
+	inside of the overall preferences UI. -->
+<PreferenceCategory android:title="Settings" android:key="settings">
+        <PreferenceScreen
+            android:key="audioscreen"
+		android:title="Audio">
+	<PreferenceCategory
+		android:key="audio"
+        android:title="Audio">
+        <ListPreference
+            android:key="@string/bufsize3"
+            android:entries="@array/bufsize_entries"
+            android:entryValues="@array/bufsize_values"
+            android:defaultValue="4"
+            android:title="Buffersize"
+            android:summary="Smaller = lower latency, larger = safer against dropouts. Auto lets the device choose."/>
+        <ListPreference
+            android:title="Channel Layout"
+            android:key="@string/channels"
+            android:entries="@array/channel_layout_entries"
+            android:entryValues="@array/channel_layout_values"
+            android:summary="Mono sums the stereo output to one channel."
+            android:defaultValue = "1"/>
+        <CheckBoxPreference
+            android:title="Use AAudio Audioengine"
+            android:summary="Lower latency on most devices; less reliable on some."
+            android:key="@string/useaaudio"/>
+    </PreferenceCategory>
+	</PreferenceScreen>
+<PreferenceScreen
+	android:title="Recording"
+	android:key="rec screen">
+    <PreferenceCategory android:title="Recording" android:key="recording">
+        <ListPreference
+            android:title="Audio Format"
+            android:key="@string/recordingformat"
+            android:entries="@array/recording_format_entries"
+            android:entryValues="@array/recording_format_values"
+            android:summary="WAV and FLAC are lossless, FLAC about half the size. MP3 is smallest, lossy."
+            android:defaultValue = "0"/>
+        <CheckBoxPreference
+            android:title="Ask for Filename on Finish"
+            android:summary="When off, recordings are named by date and time."
+            android:key="@string/askname"
+            android:defaultValue="false"/>
+        <!-- Summary set in code: it names the folder currently in use. -->
+        <Preference android:title="Output Folder"
+            android:key="@string/recordingdirectory"/>
+</PreferenceCategory>
+</PreferenceScreen>
+<PreferenceScreen
+	android:title="Presets"
+	android:key="preset screen">
+    <PreferenceCategory android:title="Presets">
+        <CheckBoxPreference
+            android:title="Show Factory Presets"
+            android:summary="When off, the LOAD PRESET list shows only Default and your own presets."
+            android:key="@string/showfactory"
+            android:defaultValue="true"/>
+        <!-- Both summaries are set in code: they report where the presets
+             actually are right now, which is the only useful thing to say. -->
+        <Preference android:title="Preset Folder"
+            android:key="@string/presetdirectory"/>
+        <Preference android:title="Use the App's Default Folder"
+            android:summary="Moves presets back to app storage, where uninstalling deletes them."
+            android:key="@string/presetfolderreset"/>
+    </PreferenceCategory>
+</PreferenceScreen>
+<PreferenceScreen
+	android:title="MIDI"
+	android:key="midi screen">
+    <PreferenceCategory android:title="MIDI">
+        <Preference
+            android:title="@string/midisender"
+            android:summary="Which connected MIDI device plays the synth."
+            android:key="@string/midisender"/>
+        <CheckBoxPreference
+            android:title="Ignore Second MIDI Note On Event"
+            android:key="@string/ignoresecondnoteonevent"
+            android:defaultValue="false"
+            android:summary="For controllers that send every Note On twice."/>
+</PreferenceCategory>
+</PreferenceScreen>
+<PreferenceScreen
+	android:title="General"
+	android:key="general settings">
+    <PreferenceCategory android:title="General">
+<CheckBoxPreference
+	android:title="Always Keep Screen On"
+	android:summary="No dimming or locking while Voltaic is open."
+	android:defaultValue="false" android:key="@string/screenonflag"/>
+<CheckBoxPreference
+                android:title="Power On at Start"
+                android:summary="When off, the engine waits for the POWER button."
+                android:key="@string/startPoweredOn"
+	android:defaultValue="true"/>
+<!-- The service itself always runs with the synth (targetSdk 37 requires it
+     for background audio). This switch is only about the NOTIFICATION being
+     visible: enabling asks for notification permission immediately and the
+     switch stays off if it is denied (MainSettingFragment). Without the
+     notification, swiping the app away stops the synth (SynthService
+     .onTaskRemoved) - with it, playback keeps running and the notification
+     carries the Stop button. -->
+<CheckBoxPreference
+	android:title="Show Notification When Backgrounded"
+	android:summary="Keeps a notification with a Stop button while the synth plays in the background. Without it, swiping the app away stops the sound."
+	android:key="@string/runAsForeGround"
+	android:defaultValue="false"/>
+
+</PreferenceCategory>
+</PreferenceScreen>
+</PreferenceCategory>
+<PreferenceCategory android:title="Misc" android:key="misc">
+<Preference android:title="Upgrade"
+	android:summary="One payment, no subscription."
+	android:key="@string/upgrade"/>
+<Preference android:title="Instructions" android:key="@string/instructions"/>
+<Preference android:title="Changelog"
+	android:summary="Opens in your browser."
+	android:key="@string/changelog"/>
+<Preference android:title="EULA" android:key="@string/eula"/>
+<Preference android:title="Open Source Software" android:key="@string/oss"/>
+<Preference android:title="Privacy Policy" android:key="@string/policy"/>
+        <Preference android:title="Storage Locations"
+            android:summary="Where presets, recordings and app files live on this device."
+            android:key="@string/homedirectory"/>
+</PreferenceCategory>
+
+</PreferenceScreen>

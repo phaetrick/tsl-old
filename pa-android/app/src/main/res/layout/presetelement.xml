@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    android:layout_width="match_parent"
+    android:layout_height="72dp"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:id="@+id/textlayout"
+        android:layout_width="fill_parent"
+        android:layout_height="match_parent"
+        android:background="?android:attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/presetname"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="start"
+            android:gravity="start"
+            android:paddingStart="8dp"
+            android:paddingLeft="8dp"
+            android:paddingEnd="8dp"
+            android:paddingRight="8dp"
+            android:paddingBottom="2dp"
+            android:textColor="@color/white"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/presetdate"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="start"
+            android:gravity="start"
+            android:paddingStart="8dp"
+            android:paddingLeft="8dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="8dp"
+            android:paddingRight="8dp"
+            android:textColor="@color/white"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/infobutton"
+        style="?android:attr/borderlessButtonStyle"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignTop="@id/textlayout"
+        android:layout_toStartOf="@+id/deletebutton"
+        android:layout_alignBottom="@id/textlayout"
+        android:gravity="end"
+        android:src="@drawable/ic_info_outline_white_24dp" />
+    <ImageView
+        android:id="@+id/deletebutton"
+        style="?android:attr/borderlessButtonStyle"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignTop="@id/textlayout"
+        android:layout_alignEnd="@+id/textlayout"
+        android:layout_alignBottom="@id/textlayout"
+        android:gravity="end"
+        android:src="@drawable/delete_normal" />
+</RelativeLayout>

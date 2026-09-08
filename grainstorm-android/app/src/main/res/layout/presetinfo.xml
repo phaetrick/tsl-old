@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    android:padding="8dp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView
+        android:id="@+id/filepathdesc"
+        android:textColor="@color/white"
+        android:textAppearance="@style/TextAppearance.AppCompat.Small"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignStart="@+id/createddesc"
+        android:layout_alignEnd="@id/createddesc"
+        android:text="Audio: ">
+    </TextView>
+    <TextView
+        android:id="@+id/filepath"
+        android:textColor="@color/white"
+        android:textAppearance="@style/TextAppearance.AppCompat.Small"
+        android:layout_alignTop="@+id/filepathdesc"
+        android:layout_toEndOf="@+id/filepathdesc"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+    </TextView>
+    <TextView
+        android:layout_below="@id/filepath"
+        android:textColor="@color/white"
+        android:textAppearance="@style/TextAppearance.AppCompat.Small"
+        android:id="@+id/createddesc"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Last modified: ">
+    </TextView>
+    <TextView
+        android:id="@+id/created"
+        android:textColor="@color/white"
+        android:textAppearance="@style/TextAppearance.AppCompat.Small"
+        android:layout_below="@+id/filepath"
+        android:layout_toEndOf="@+id/createddesc"
+        android:layout_alignTop="@id/createddesc"
+        android:layout_alignBottom="@id/createddesc"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+    </TextView>
+</RelativeLayout>

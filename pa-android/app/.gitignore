@@ -1,0 +1,21 @@
+# content of .gitignore
+*.log
+*.iml
+
+.gradle
+
+/local.properties
+
+/.idea/*
+
+.DS_Store
+
+/build
+
+/captures
+
+/release
+
+.externalNativeBuild    
+
+.cxx

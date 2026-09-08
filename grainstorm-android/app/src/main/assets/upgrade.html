@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grainstorm Upgrade</title>
+  <link href="bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="txtstyle.css">
+  <link rel="stylesheet" href="gallery.css">
+</head>
+
+<body class="content">
+  <div class="container">
+    <h5>Features</h5>
+    <br/>
+    <ul>
+      <li>
+        Live Recording: Records everything currently outputting from the speakers before it reaches the DAC. Output format options include stereo 16-bit WAV, MP3, or FLAC (16 or 24-bit), with the sample rate matching the default sample rate of the device (usually 44.1 or 48 kHz).
+      </li>
+      <br/>
+      <li>
+        Offline Recording: Stops playback, resets LFO phases, and cleanly renders the entire loop of the current track to disk without any clipping.
+      </li>
+      <br/>
+      <li>
+        Preset Saving and Restoring: Saves and restores presets on a per-track basis or for the whole project. All parameters, playback and loop positions, LFO states, effect parameters, and links to current audio input files are included.
+      </li>
+      <br/>
+      <li>
+        Saving and Restoring MIDI Mappings.
+      </li>
+      <br/>
+      <li>
+        LFO Syncing with external MIDI Clock.
+      </li>
+      <br/>
+      <li>
+        Mono- and Stereo Effects: Includes a variety of effects such as reverbs, delays, EQs, and phasers. The manual provides descriptions of some of the effects included in the Upgrade.
+      </li>
+    </ul>
+    <br/>
+
+    <h5>Lifelong Validity</h5>
+    <br/>
+    <p>
+      The Upgrade offers guaranteed lifelong validity, encompassing all future features, versions, and updates. It is a one-time purchase.
+    </p>
+    <br/>
+
+    <h5>Money Back Guarantee In Case Of Dissatisfaction</h5>
+    <br/>
+    <p>
+      We strive for your satisfaction with the Upgrade, unlocking Grainstorm's full creative potential. If you are dissatisfied, please email tsl@rocks.me with your order ID within approximately a week of purchase for a refund.
+    </p>
+    <p>
+      All transactions are handled by Google, ensuring no personal information such as your name or credit card details is sent to us.
+    </p>
+    <p>
+      If planning to use Grainstorm on other devices, ensure they support Android 6.0 or higher and OpenGL ES 3.0.
+    </p>
+    <br/>
+
+    <h5>Screenshots</h5>
+    <div class="row">
+      <div class="column">
+        <img src="recording.webp" style="width:100%" onclick="openModal();currentSlide(1)" class="hover-shadow cursor">
+      </div>
+      <div class="column">
+        <img src="trackmenu.webp" style="width:100%" onclick="openModal();currentSlide(2)" class="hover-shadow cursor">
+      </div>
+      <div class="column">
+        <img src="lfotargets.webp" style="width:100%" onclick="openModal();currentSlide(3)" class="hover-shadow cursor">
+      </div>
+      <div class="column">
+        <img src="envftargets.webp" style="width:100%" onclick="openModal();currentSlide(4)" class="hover-shadow cursor">
+      </div>
+      <div class="column">
+        <img src="vcos.webp" style="width:100%" onclick="openModal();currentSlide(5)" class="hover-shadow cursor">
+      </div>
+      <div class="column">
+        <img src="vcfs.webp" style="width:100%" onclick="openModal();currentSlide(6)" class="hover-shadow cursor">
+      </div>
+      <div class="column">
+        <img src="mdelay.webp" style="width:100%" onclick="openModal();currentSlide(7)" class="hover-shadow cursor">
+      </div>
+      <div class="column">
+        <img src="reverb5.webp" style="width:100%" onclick="openModal();currentSlide(8)" class="hover-shadow cursor">
+      </div>
+    </div>
+
+    <div id="myModal" class="modal">
+      <span class="close cursor" onclick="closeModal()">&times;</span>
+      <div class="modal-content">
+        <!-- Caption text -->
+        <div class="caption-container">
+          <p id="caption"></p>
+        </div>
+        <div class="mySlides">
+          <img src="recording.webp" style="height:100%">
+        </div>
+
+        <div class="mySlides">
+          <img src="trackmenu.webp" style="height:100%">
+        </div>
+
+        <div class="mySlides">
+          <img src="lfotargets.webp" style="height:100%">
+        </div>
+
+        <div class="mySlides">
+          <img src="envftargets.webp" style="height:100%">
+        </div>
+
+        <div class="mySlides">
+          <img src="vcos.webp" style="height:100%">
+        </div>
+
+        <div class="mySlides">
+          <img src="vcfs.webp" style="height:100%">
+        </div>
+
+        <div class="mySlides">
+          <img src="mdelay.webp" style="height:100%">
+        </div>
+
+        <div class="mySlides">
+          <img src="reverb5.webp" style="height:100%">
+        </div>
+        <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+        <a class="next" onclick="plusSlides(1)">&#10095;</a>
+      </div>
+    </div>
+
+    <script>
+      var names = ["Startscreen, 'Live Recording'", "Track Menu", "LFO Targets", "Envelope Follower Targets", "Grain by Grain VCOs", "Grain by Grain VCFs", "Multi Delay", "Reverb5"];
+    </script>
+    <script src="gallery.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,12 @@
+androidTest
+test
+# ...except the trial gate's crypto test. The rules above exist to keep Android
+# Studio's generated test scaffolding out; this one is real, and it is the only
+# thing standing between a shrunk-away Ed25519 and a trial that silently becomes
+# "capped sessions forever" on every device.
+!test/
+!test/java/
+!test/java/me/
+!test/java/me/rocks/
+!test/java/me/rocks/pocketanalog/
+!test/java/me/rocks/pocketanalog/TrialGateCryptoTest.java

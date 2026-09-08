@@ -1,0 +1,125 @@
+apply plugin: 'com.android.application'
+
+def localProps = new Properties()
+def localPropsFile = file("${rootProject.projectDir}/local.properties")
+if (localPropsFile.exists()) localProps.load(localPropsFile.newDataInputStream())
+
+android {
+    namespace "me.rocks.pocketanalog"
+    compileSdk = 37
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    lintOptions {
+        checkReleaseBuilds false
+    }
+
+    buildFeatures {
+        prefab true
+    }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
+    defaultConfig {
+        applicationId "me.rocks.pocketanalog"
+        minSdkVersion 24
+        targetSdkVersion 37
+        versionCode 13
+        versionName "1.1"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            cmake {
+                version "3.22.1"
+                arguments '-DCMAKE_VERBOSE_MAKEFILE=ON',
+                        '-DANDROID_STL=c++_shared',
+                        '-DANDROID_PLATFORM=android-24',
+                        '-DANDROID_ARM_NEON=ON'
+            }
+        }
+        ndk {
+            //noinspection ChromeOsAbiSupport
+            abiFilters 'arm64-v8a'
+        }
+    }
+    signingConfigs {
+        release {
+            storeFile file(localProps['KEYSTORE_PATH'] ?: 'missing.keystore')
+            storePassword localProps['KEYSTORE_PASSWORD'] ?: ''
+            keyAlias localProps['KEY_ALIAS'] ?: ''
+            keyPassword localProps['KEY_PASSWORD'] ?: ''
+        }
+        localTest {
+            storeFile file(localProps['LOCAL_KEYSTORE_PATH'] ?: 'missing.keystore')
+            storePassword localProps['LOCAL_KEYSTORE_PASSWORD'] ?: ''
+            keyAlias localProps['LOCAL_KEY_ALIAS'] ?: ''
+            keyPassword localProps['LOCAL_KEY_PASSWORD'] ?: ''
+        }
+    }
+
+    buildTypes {
+        release {
+            externalNativeBuild {
+                cmake {
+                    arguments "-DRELEASEBUILD=1"
+                }
+            }
+            shrinkResources true
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+        debug {
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCMAKE_BUILD_TYPE=Debug"
+                }
+            }
+        }
+        staging {
+            initWith buildTypes.release
+            signingConfig signingConfigs.localTest
+            externalNativeBuild {   // TEST ONLY — remove with the setup.cpp instrumentation
+                cmake {
+                    arguments "-DRELEASEBUILD=1", "-DINTEGRITY_TEST_FAST=1"
+                }
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            def isMac = System.getProperty('os.name').toLowerCase().contains('mac')
+            def grainstormOldRoot = isMac
+                    ? "${System.getProperty('user.home')}/programming/grainstorm-old"
+                    : "/home/pr/programming/grainstorm-old"
+            path file("${grainstormOldRoot}/va/CMakeLists.txt")
+
+        }
+    }
+
+    ndkVersion "28.1.13356709"
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.google.android.material:material:1.14.0'
+    implementation 'androidx.recyclerview:recyclerview:1.4.0'
+    implementation 'androidx.documentfile:documentfile:1.1.0'
+    implementation 'androidx.preference:preference:1.2.1'
+    implementation 'com.android.billingclient:billing:9.1.0'
+    implementation('com.google.guava:guava:33.7.1-jre')
+    implementation 'com.google.oboe:oboe:1.10.0'
+    // Ed25519 verification for the trial token. Android's own JCA only gained
+    // Ed25519 at API 33 and minSdk here is 24, so the primitive has to be
+    // bundled. Used through the low-level crypto API (Ed25519Signer), never by
+    // registering the JCE provider -- that keeps R8 shrinking it to the curve
+    // arithmetic instead of dragging in the whole provider surface.
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.85.2'
+    testImplementation 'junit:junit:4.13.2'
+}

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="MyAlertdialogtheme1" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:bottomBright">@color/white</item>
+        <item name="android:bottomDark">@color/white</item>
+        <item name="android:bottomMedium">@color/white</item>
+        <item name="android:centerBright">@color/white</item>
+        <item name="android:centerDark">@color/white</item>
+        <item name="android:centerMedium">@color/white</item>
+        <item name="android:fullBright">@color/orange</item>
+        <item name="android:fullDark">@color/orange</item>
+        <item name="android:topBright">@color/colorAccent</item>
+        <item name="android:topDark">@color/colorAccent</item>
+    </style>
+
+    <style name="MyAlertdialogtheme" parent="Theme.AppCompat.Dialog.Alert">
+        <!-- your app branding color for the app bar -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="android:windowBackground">@color/dialogbackground</item>
+        <item name="android:elevation">4dip</item>
+        <!-- darker variant for the status bar and contextual app bars -->
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <!-- theme UI controls like checkboxes and text fields -->
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/white</item>
+        <item name="android:gravity">center</item>
+
+    </style>
+    <style name="MyAlertdialogthemeInvisible" parent="Theme.AppCompat.Dialog.Alert">
+        <!-- your app branding color for the app bar -->
+        <item name="colorPrimary">@color/transparent</item>
+        <item name="android:windowBackground">@color/transparent</item>
+        <item name="android:elevation">0dp</item>
+        <!-- darker variant for the status bar and contextual app bars -->
+        <item name="colorPrimaryDark">@color/transparent</item>
+        <!-- theme UI controls like checkboxes and text fields -->
+        <item name="colorAccent">@color/transparent</item>
+        <item name="android:textColorPrimary">@color/transparent</item>
+        <item name="android:textColorSecondary">@color/transparent</item>
+        <item name="android:gravity">center</item>
+
+    </style>
+
+    <style name="MyActivity" parent="Theme.Design.NoActionBar">
+        <!-- your app branding color for the app bar -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+
+        <!-- background and text -->
+        <item name="android:windowBackground">@color/blackblack</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/white</item>
+
+        <!-- full screen, no bars -->
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowDisablePreview">false</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+
+        <item name="android:windowSplashScreenBackground">@android:color/black</item>
+
+        <item name="postSplashScreenTheme">@style/MyActivity</item>
+
+        <item name="android:windowSplashScreenBrandingImage">@null</item>
+    </style>
+
+    <style name="Seperator">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:background">@color/colorDividers</item>
+    </style>
+    <attr name="textsizenormal">16sp</attr>
+    <attr name="textsizelarge">20sp</attr>
+
+    <color name="colorPrimary">#2196F3</color>
+    <color name="colorPrimaryDark">#0D47A1</color>
+    <color name="colorPrimaryLight">#BBDEFB</color>
+    <color name="colorAccent">#82B1FF</color>
+    <color name="colorAccent2">@color/orange</color>
+    <color name="colorBackground">@color/black</color>
+    <color name="colorBackground2">@color/blackblack</color>
+    <color name="colorDividers">#1E1E1E1E</color>
+    <color name="colorIconInactiveLight">@color/graytext</color>
+    <color name="colorIconActiveLight">@color/white</color>
+    <color name="graytext">#B2FFFFFF</color>
+    <color name="rowclick">#30FFFFFF</color>
+    <color name="black">#212121</color>
+    <color name="blackblack">#000000</color>
+    <color name="windowBackground">#DD101010</color>
+    <color name="windowFrame">#30FFFFFF</color>
+    <color name="dialogbackground">#424242</color>
+    <color name="yellow">#FFEB3B</color>
+    <color name="orange">#FF9800</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="green">#4CAF50</color>
+    <color name="red">#F44336</color>
+    <color name="transparent">#00000000</color>
+    <color name="primary_text_default_material_light">#de000000</color>
+    <!-- Black 54% -->
+    <color name="secondary_text_material_light">#8a000000</color>
+    <!-- Black 54% (TODO: same as secondary?) -->
+    <color name="tertiary_text_material_light">#8a000000</color>
+
+    <!-- White 87% -->
+    <color name="primary_text_default_material_dark">#deffffff</color>
+    <!-- White 38% -->
+    <color name="secondary_text_material_dark">#61ffffff</color>
+    <!-- White 38% (TODO: same as secondary?) -->
+    <color name="tertiary_text_material_dark">#61ffffff</color>
+    <style name="SettingsTextview">
+        <item name="android:layout_width">match_parent</item>
+        <item name ="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">?android:attr/listPreferredItemHeightSmall</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+        <item name="android:background">?android:attr/selectableItemBackground</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textAppearance">@style/TextAppearance.AppCompat.Medium</item>
+        <item name="android:ellipsize">marquee</item>
+        <item name="android:fadingEdge">horizontal</item>
+    </style>
+    <style name="SettingsTextviewMulti" parent="SettingsTextview">
+        <item name="android:singleLine">false</item>
+        <item name="android:paddingTop">0dp</item>
+
+
+    </style>
+    <style name="SettingsTextviewTitle">
+        <item name="android:layout_width">match_parent</item>
+        <item name ="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">?android:attr/listPreferredItemHeightSmall</item>
+        <item name="android:gravity">start</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:background">?android:attr/selectableItemBackground</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textAppearance">@style/TextAppearance.AppCompat.Title</item>
+        <item name="android:ellipsize">marquee</item>
+        <item name="android:fadingEdge">horizontal</item>
+    </style>
+    <style name="entryitemstyle" parent="SettingsTextview">
+        <item name="android:textSize">20sp</item>
+    </style>
+    <style name="radioButtonStyle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.AppCompat.Medium</item>
+        <item name="android:layout_marginStart">16dp</item>
+        <item name="android:layout_marginEnd">16dp</item>
+        <item name="android:paddingStart">16dp</item>
+    </style>
+    <style name="radioButtonParentStyle">
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+    <style name="dialogParentStyle">
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+    </style>
+    <style name="buttonStyle" parent="@android:style/Widget.Holo.Light.Button.Borderless.Small">
+</style>"
+</resources>
