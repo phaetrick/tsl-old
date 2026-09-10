@@ -711,6 +711,7 @@ handlePointerMove(tsl::AppState *_STATE, AInputEvent *event, int index, bool mid
 // Optimized key event handler with event pooling
 static int32_t handleKeyEvent(tsl::AppState *_STATE, AInputEvent *event) {
     const auto event_meta_state = AKeyEvent_getMetaState(event);
+    // Legacy globals — key ROUTING uses the per-event mods snapshot below
     _STATE->controlPressed = (event_meta_state & AMETA_CTRL_ON) != 0;
     _STATE->shiftPressed = (event_meta_state & AMETA_SHIFT_ON) != 0;
     _STATE->altPressed = (event_meta_state & AMETA_ALT_ON) != 0;
@@ -739,6 +740,10 @@ static int32_t handleKeyEvent(tsl::AppState *_STATE, AInputEvent *event) {
     tsl::graphics::InputEvent keyEvent{
             focusedView, inputAction, key, 0, 0
     };
+    // Modifier snapshot travels with the event (the only routing channel)
+    if (event_meta_state & AMETA_SHIFT_ON) keyEvent.mods |= tsl::graphics::MOD_SHIFT;
+    if (event_meta_state & AMETA_ALT_ON)   keyEvent.mods |= tsl::graphics::MOD_ALT;
+    if (event_meta_state & AMETA_CTRL_ON)  keyEvent.mods |= tsl::graphics::MOD_CTRL;
 
     focusedView->callback(keyEvent);
 

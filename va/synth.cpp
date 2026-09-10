@@ -678,11 +678,28 @@ static PadParams padParamsFromSnapshot(tsl::AppState* _appState, int o) {
 // the first note silent. Called every block, whether or not a voice is running;
 // padWarmRequest is a no-op once the set is cached or already building.
 static void warmPadSets(tsl::AppState* _appState) {
-    static const int typeP[3] = {VCO1TYPE, VCO2TYPE, VCO3TYPE};
+    static const int typeP[3]  = {VCO1TYPE,  VCO2TYPE,  VCO3TYPE};
+    // The PAD page's subsection index per oscillator: VCO3 has the extra MOD tab, so
+    // its PAD entry sits one later (vco3subnames in gui.cpp).
+    static const int spaceP[3] = {VCO1SPACE, VCO2SPACE, VCO3SPACE};
+    static const int padSpc[3] = {5, 5, 6};
     const auto& sp = _appState->data->synth_params;
-    for (int o = 0; o < 3; o++)
-        if ((int)sp[typeP[o]] == 98)
-            padWarmRequest(_appState, padParamsFromSnapshot(_appState, o), (double)_appState->sr);
+    for (int o = 0; o < 3; o++) {
+        // Warm + publish when the oscillator is ON the PAD engine, and also while its
+        // PAD page is the visible subsection: the scope on that page has to show the
+        // selected table no matter what the oscillator is currently playing —
+        // otherwise the page reads as having no display at all.
+        // The page-open case costs at most one set build, on demand, and the LRU's
+        // touch-on-hit keeps sounding sets ahead of a browsed one in eviction order.
+        if ((int)sp[typeP[o]] != 98 && (int)sp[spaceP[o]] != padSpc[o]) continue;
+        const PadParams p = padParamsFromSnapshot(_appState, o);
+        padWarmRequest(_appState, p, (double)_appState->sr);
+        // Tell the PAD display which set this oscillator is actually on — here
+        // for the same reason warmWtSets publishes: the picture has to be right
+        // on a SILENT instrument too, and this key is byte-identical to the one
+        // the warm above requests, so the two cannot disagree.
+        padPublishDisplay(o, p, (double)_appState->sr);
+    }
 }
 #else
 // PADsynth parked (see PA_ENABLE_PAD in types_pocketanalog.h): its params live past
@@ -1157,9 +1174,10 @@ struct VcoNote : private Phaser,HuovilainenMoog,RingModFast<MYFLOAT> {
         _noteNum = noteNum;
         _fromSequencer = false;
         _atSnapshot = 0.f;
-        _lfo1.reset(); _lfo2.reset();
-        _lfo1val = 0.; _lfo2val = 0.; _lfoStrikeOff = 0.;
+        _lfo1.reset(); _lfo2.reset(); _lfo3.reset(); _lfo4.reset();
+        _lfo1val = 0.; _lfo2val = 0.; _lfo3val = 0.; _lfo4val = 0.; _lfoStrikeOff = 0.;
         _lfo1RateHz = params[LFO1RATE]; _lfo2RateHz = params[LFO2RATE]; // already decoded (paramCurve==Log10)
+        _lfo3RateHz = params[LFO3RATE]; _lfo4RateHz = params[LFO4RATE];
         _velnorm = vel / 127.;
         const MYFLOAT velAmt = _appState->params[0][VEL_TO_AMP].load();
         _gain = velAmt > 0. ? pow(_velnorm, velAmt * 3.) : 1.;
@@ -1360,6 +1378,10 @@ struct VcoNote : private Phaser,HuovilainenMoog,RingModFast<MYFLOAT> {
                               lparams[LFO1PHASE].load() * (MYFLOAT)(1. / 360.));
         _lfo2val = _lfo2.tick(_lfo2RateHz, (int)lparams[LFO2WAVE].load(), _appState->sr,
                               lparams[LFO2PHASE].load() * (MYFLOAT)(1. / 360.));
+        _lfo3val = _lfo3.tick(_lfo3RateHz, (int)lparams[LFO3WAVE].load(), _appState->sr,
+                              lparams[LFO3PHASE].load() * (MYFLOAT)(1. / 360.));
+        _lfo4val = _lfo4.tick(_lfo4RateHz, (int)lparams[LFO4WAVE].load(), _appState->sr,
+                              lparams[LFO4PHASE].load() * (MYFLOAT)(1. / 360.));
         if (--count <= 0) {
             egtmp[0] = adsr[0].tick();
             egtmp[1] = adsr[1].tick();
@@ -1371,14 +1393,21 @@ struct VcoNote : private Phaser,HuovilainenMoog,RingModFast<MYFLOAT> {
             const MYFLOAT at = _atSnapshot / 127.;
             const MYFLOAT mw = _appState->data->modwheel.load(std::memory_order_relaxed) / 127.;
 
-            // LFO destinations
-            const int lfo1dest = (int)lparams[LFO1DEST].load();
-            const int lfo2dest = (int)lparams[LFO2DEST].load();
+            // LFO modulation comes from the MULTI-DEST MATRIX (lfoMdId): one bipolar
+            // depth per (LFO, dest), every slot live at once. The legacy
+            // LFOnDEST/LFOnDEPTH pair is a UI window onto the selected slot and is
+            // folded into the matrix at load time (lfoWindowTick / foldLegacyLfoRoutes)
+            // — the engine reads ONLY the matrix, or the window would double-apply.
             // MW/AT -> LFO depth: same (1-route)+(route*val) factor as MW_TO_VIBRATO/AT_TO_VIBRATO
             const MYFLOAT mwLfoDepthFact = 1. - lparams[MW_TO_LFODEPTH].load() * (1. - mw);
             const MYFLOAT atLfoDepthFact = 1. - lparams[AT_TO_LFODEPTH].load() * (1. - at);
-            const MYFLOAT lfo1depth = lparams[LFO1DEPTH].load() * mwLfoDepthFact * atLfoDepthFact;
-            const MYFLOAT lfo2depth = lparams[LFO2DEPTH].load() * mwLfoDepthFact * atLfoDepthFact;
+            const MYFLOAT mdScale = mwLfoDepthFact * atLfoDepthFact;
+            const MYFLOAT lfoVals[4] = {_lfo1val, _lfo2val, _lfo3val, _lfo4val};
+            // scaled slot depth — the routed excursion; raw (unscaled) reads stay in
+            // lfoFeeds below, where "is anything routed here" must not depend on MW/AT.
+            auto md = [&](int n, int dest) -> MYFLOAT {
+                return lparams[lfoMdId(n, dest)].load() * mdScale;
+            };
             // MW/AT -> LFO rate: additive shift in the same log domain the rate
             // param is stored in (not a linear Hz-domain scale), so the response
             // stays evenly spaced across the range like the rate knob itself.
@@ -1388,8 +1417,12 @@ struct VcoNote : private Phaser,HuovilainenMoog,RingModFast<MYFLOAT> {
             const MYFLOAT lfoRateRouteAmtClamped = lfoRateRouteAmt > 1. ? 1. : lfoRateRouteAmt;
             const MYFLOAT rate1InLog = lparams[LFO1RATE].load();
             const MYFLOAT rate2InLog = lparams[LFO2RATE].load();
+            const MYFLOAT rate3InLog = lparams[LFO3RATE].load();
+            const MYFLOAT rate4InLog = lparams[LFO4RATE].load();
             _lfo1RateHz = LOG2NORMALF(rate1InLog + (_appState->parameters[LFO1RATE].max - rate1InLog) * lfoRateRouteAmtClamped);
             _lfo2RateHz = LOG2NORMALF(rate2InLog + (_appState->parameters[LFO2RATE].max - rate2InLog) * lfoRateRouteAmtClamped);
+            _lfo3RateHz = LOG2NORMALF(rate3InLog + (_appState->parameters[LFO3RATE].max - rate3InLog) * lfoRateRouteAmtClamped);
+            _lfo4RateHz = LOG2NORMALF(rate4InLog + (_appState->parameters[LFO4RATE].max - rate4InLog) * lfoRateRouteAmtClamped);
             // LFO ROUTES ARE BIPOLAR. Lfo::tick returns -1..1 with every shape centred
             // on zero, so val*depth is already a signed excursion centred on zero: the
             // knob is the CENTRE of the sweep and the LFO swings symmetrically either
@@ -1413,8 +1446,7 @@ struct VcoNote : private Phaser,HuovilainenMoog,RingModFast<MYFLOAT> {
             // so the knob and slider arcs cannot disagree with what is actually heard.
             auto lfoBi = [&](int dest) -> MYFLOAT {
                 MYFLOAT o = 0.;
-                if (lfo1dest == dest) o += _lfo1val * lfo1depth;
-                if (lfo2dest == dest) o += _lfo2val * lfo2depth;
+                for (int n = 0; n < 4; n++) o += lfoVals[n] * md(n, dest);
                 return o;
             };
             const MYFLOAT lfoFiltOff     = lfoBi(2);
@@ -1485,8 +1517,10 @@ struct VcoNote : private Phaser,HuovilainenMoog,RingModFast<MYFLOAT> {
                 return depth < 0. ? 1. + depth * 0.5 * (1. + val)
                                   : 1. - depth * 0.5 * (1. - val);
             };
-            const MYFLOAT lfoAmpFact = (lfo1dest == 3 ? duck1(lfo1depth, _lfo1val) : 1.)
-                                     * (lfo2dest == 3 ? duck1(lfo2depth, _lfo2val) : 1.);
+            // duck1(0, v) is exactly 1, so unrouted slots cost a multiply and change
+            // nothing — no dest test needed with the matrix.
+            const MYFLOAT lfoAmpFact = duck1(md(0, 3), _lfo1val) * duck1(md(1, 3), _lfo2val)
+                                     * duck1(md(2, 3), _lfo3val) * duck1(md(3, 3), _lfo4val);
             // PER-SOURCE GAIN (18 GAIN1 .. 21 NOISE), the same unipolar duck as AMP and
             // for the same reason -- see the note above lfoBi. Bipolar here would put
             // the GAIN knob in the middle of the excursion, so the number written on the
@@ -1498,8 +1532,9 @@ struct VcoNote : private Phaser,HuovilainenMoog,RingModFast<MYFLOAT> {
             // because both accumulators are reset together at note-on and the MW/AT
             // rate shift below is the same formula toward the same max for both.
             auto lfoDuck = [&](int dest) -> MYFLOAT {
-                return (lfo1dest == dest ? duck1(lfo1depth, _lfo1val) : 1.)
-                     * (lfo2dest == dest ? duck1(lfo2depth, _lfo2val) : 1.);
+                MYFLOAT f = 1.;
+                for (int n = 0; n < 4; n++) f *= duck1(md(n, dest), lfoVals[n]);
+                return f;
             };
             for (int i = 0; i < 4; i++)
                 _gainFactInc[i] = (lfoDuck(18 + i) - _liveGainFact[i]) * (1. / 64.);
@@ -1600,8 +1635,11 @@ struct VcoNote : private Phaser,HuovilainenMoog,RingModFast<MYFLOAT> {
             // moves within A..B and cannot carry the value somewhere the slider's arc does
             // not show. (AT/MW used to be able to push past B. They no longer can.)
             auto lfoFeeds = [&](int dest) -> bool {
-                return (lfo1dest == dest && lparams[LFO1DEPTH].load() != 0.) ||
-                       (lfo2dest == dest && lparams[LFO2DEPTH].load() != 0.);
+                // RAW slot reads on purpose: whether a patch routes an LFO here is a
+                // property of the patch, not of the MW/AT performance (see applyMorph).
+                for (int n = 0; n < 4; n++)
+                    if (lparams[lfoMdId(n, dest)].load() != 0.) return true;
+                return false;
             };
             auto applyMorph = [&](MYFLOAT A, MYFLOAT B, int srcParam, MYFLOAT lfoOff, bool lfoRouted) -> MYFLOAT {
                 const MYFLOAT span = B - A;
@@ -1624,11 +1662,15 @@ struct VcoNote : private Phaser,HuovilainenMoog,RingModFast<MYFLOAT> {
                 const MYFLOAT m = applyMorph(A, B, mid.eg, lfoMorphOff[o], lfoFeeds(8 + o));
                 _morphinc[o] = (m - _livemorph[o]) * (1. / 64.);
                 const MYFLOAT span = B - A;
-                // The mailbox feeds the WAVETABLE display, which only exists for a WT
-                // oscillator; a PAD osc publishing here would drive the picture of a
-                // set it is not playing.
+                // Slot o feeds the WAVETABLE display and slot WT_DISPLAY_OSCS + o the
+                // PAD display — each page keeps its own picture, so each type
+                // publishes only to its own slot: a PAD osc publishing into the WT
+                // slot would drive the picture of a set it is not playing.
                 if (waveform[o] == 99)
                     wtPublishMorph(o, std::fabs(span) < 1e-6 ? 0.f : (float)((m - A) / span));
+                else if (waveform[o] == 98)
+                    wtPublishMorph(WT_DISPLAY_OSCS + o,
+                                   std::fabs(span) < 1e-6 ? 0.f : (float)((m - A) / span));
             }
 
             // Per-osc unison config (applied in the non-PM path). ratio = symmetric
@@ -1951,15 +1993,15 @@ struct VcoNote : private Phaser,HuovilainenMoog,RingModFast<MYFLOAT> {
     MYFLOAT _amdepth{};
     MYFLOAT _pmdepth{};
     bool _sync[3]{};
-    Lfo _lfo1{}, _lfo2{};
-    MYFLOAT _lfo1val{}, _lfo2val{};
+    Lfo _lfo1{}, _lfo2{}, _lfo3{}, _lfo4{};
+    MYFLOAT _lfo1val{}, _lfo2val{}, _lfo3val{}, _lfo4val{};
     // MODAL filter STRIKE excursion (LFO dest 17). An additive bipolar offset whose
     // neutral is 0, which is also what applyAT sees before tick() has ever run.
     MYFLOAT _lfoStrikeOff{0};
     // MW/AT->rate shift computed once per 64-sample block (see tick()), then
     // read every sample by the _lfo1/_lfo2 .tick() calls - same split as
     // gains[4]/resonance (block-rate compute, per-sample use).
-    MYFLOAT _lfo1RateHz{}, _lfo2RateHz{};
+    MYFLOAT _lfo1RateHz{}, _lfo2RateHz{}, _lfo3RateHz{}, _lfo4RateHz{};
     MYFLOAT _phase{}, _gain{1.}, _velnorm{1.}, _atAmpGain{1.};
     // Per-sample follower for _atAmpGain, and its one-pole coefficient. Seeded by the
     // first-block _seedLive snap in tick() (not at init time — that assignment is a
@@ -2784,6 +2826,11 @@ private:
 // anything that rewrites params[0] AFTER the snapshot and expects to be heard on the
 // very next note - a preset load, which arrives on the audio thread through
 // toAudioThreadQueue in the middle of the block - has to retake it.
+// (The LFO DEST-cursor/DEPTH-window coherence hook lives in EventHandler.cpp's
+// lfoWindowHook, on the Event::apply funnel — NOT here. A first version ran per
+// audio block in synthFunc and the window went dead whenever audio wasn't
+// processing.)
+
 void refreshSynthParams(tsl::AppState* _appState) {
     auto& synth_params = _DATA->synth_params;
     for (int i = 1; i < NUM_PARAMS; i++) {
@@ -3060,7 +3107,37 @@ PlayerBase::synthFunc(tsl::AppState* _appState, sampleTSL** tin, sampleTSL** out
         }
     }
 
-    auto postgain = LOG2NORMALF(_STATE->params[0][POSTGAIN].load());
+    // Session wall: glide to silence through the existing smoothing instead of
+    // letting stream->stop() cut mid-waveform.
+    auto postgain = _DATA->sessionMute.load() ? 0.f
+        : LOG2NORMALF(_STATE->params[0][POSTGAIN].load());
+
+    // The ensemble, on the MIXED voices — where a string machine's is. See
+    // Chorus.h for why this is not per-note. Crossfaded on power on/off and reset
+    // once fully faded, exactly like the delay and reverb above, so switching it
+    // back on cannot dump a stale tail back in.
+    {
+        const bool chOn = _STATE->params[0][CHORUSPOW].load() == 1.0;
+        auto& fade = _DATA->synth_chorusFade;
+        auto& needsReset = _DATA->synth_chorusNeedsReset;
+        if (chOn || fade > 0.0001) {
+            std::copy(bufl.begin(), bufl.begin() + samples, dryl.begin());
+            std::copy(bufr.begin(), bufr.begin() + samples, dryr.begin());
+            _DATA->synth_chorus.setDepth((double)_STATE->params[0][CHORUSDEPTH].load());
+            _DATA->synth_chorus.setRate((double)_STATE->params[0][CHORUSRATE].load());
+            _DATA->synth_chorus.process(bufl.data(), bufr.data(), samples,
+                                        (double)_STATE->params[0][CHORUSMIX].load());
+            for (int i = 0; i < samples; i++) {
+                fade += 0.001 * ((chOn ? 1.0 : 0.0) - fade);
+                bufl[i] = dryl[i] + fade * (bufl[i] - dryl[i]);
+                bufr[i] = dryr[i] + fade * (bufr[i] - dryr[i]);
+            }
+            needsReset = true;
+        } else if (needsReset) {
+            _DATA->synth_chorus.clear();
+            needsReset = false;
+        }
+    }
 
     float peakright = 0.00001;
     float peakleft = 0.00001;

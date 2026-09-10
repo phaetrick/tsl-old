@@ -27,6 +27,7 @@ public abstract class MidiPortSelector extends DeviceCallback {
     protected Activity mActivity;
     private MidiPortWrapper mCurrentWrapper;
     private static String mCurrentString;
+    private static volatile String sCurrentDeviceName;
 
     /**
      * @param midiManager
@@ -70,6 +71,8 @@ public abstract class MidiPortSelector extends DeviceCallback {
                                                int pos, long id) {
                             mCurrentWrapper = mAdapter.getItem(pos);
                             mCurrentString = mCurrentWrapper != null ? mCurrentWrapper.toString() : null;
+                            sCurrentDeviceName =
+                                    mCurrentWrapper != null ? mCurrentWrapper.getDeviceName() : null;
                             onPortSelected(mCurrentWrapper);
                             mSpinner.setTag(R.id.pos, pos);
                     }
@@ -77,8 +80,18 @@ public abstract class MidiPortSelector extends DeviceCallback {
                     public void onNothingSelected(AdapterView<?> parent) {
                         onPortSelected(null);
                         mCurrentWrapper = null;
+                        sCurrentDeviceName = null;
                     }
                 });
+    }
+
+    /**
+     * Device name behind the current spinner selection, or null when that selection is
+     * the empty placeholder. Static like the selection it reports, so it survives the
+     * dialog being closed and reopened while the connection itself stays up.
+     */
+    static String getCurrentDeviceName() {
+        return sCurrentDeviceName;
     }
 
     /**

@@ -1,6 +1,7 @@
 #include "DynamicDialog.h"
 #include "app.h"
 #include <IconsMaterialDesignReduced.h>
+#include <include/core/SkFontMetrics.h>
 #include <sstream>
 
 using namespace tsl::graphics;
@@ -69,6 +70,26 @@ DynamicDialog::PendingAction::Type DynamicDialog::getElementAt(float x, float y,
 			if (!customButtonLabel.empty() && relX >= fieldSpacing && relX <= fieldSpacing + buttonW &&
 				relY >= buttonY && relY <= buttonY + buttonHeight) {
 				elementIndex = 2;
+				return PendingAction::BUTTON_CLICK;
+			}
+			break;
+		}
+		case ButtonMode::OK_CANCEL_CUSTOM: {
+			// Same three-across geometry as drawButtons: custom, cancel, ok.
+			if (relY < buttonY || relY > buttonY + buttonHeight) break;
+			const int customX = fieldSpacing;
+			const int cancelX = fieldSpacing * 2 + buttonW;
+			const int okX = fieldSpacing * 3 + buttonW * 2;
+			if (!customButtonLabel.empty() && relX >= customX && relX <= customX + buttonW) {
+				elementIndex = 2;
+				return PendingAction::BUTTON_CLICK;
+			}
+			if (showCancelButton && relX >= cancelX && relX <= cancelX + buttonW) {
+				elementIndex = 0;
+				return PendingAction::BUTTON_CLICK;
+			}
+			if (showOkButton && relX >= okX && relX <= okX + buttonW) {
+				elementIndex = 1;
 				return PendingAction::BUTTON_CLICK;
 			}
 			break;
@@ -206,6 +227,9 @@ bool DynamicDialog::hasVisibleButtons() const {
 	case ButtonMode::CUSTOM_BUTTON: {
 		return !customButtonLabel.empty();
 	}
+	case ButtonMode::OK_CANCEL_CUSTOM: {
+		return showOkButton || showCancelButton || !customButtonLabel.empty();
+	}
 	default: {
 		return false;
 	}
@@ -228,6 +252,10 @@ int DynamicDialog::getButtonCount() const {
 	}
 	case ButtonMode::CUSTOM_BUTTON: {
 		return !customButtonLabel.empty() ? 1 : 0;
+	}
+	case ButtonMode::OK_CANCEL_CUSTOM: {
+		return (showOkButton ? 1 : 0) + (showCancelButton ? 1 : 0) +
+		       (!customButtonLabel.empty() ? 1 : 0);
 	}
 	default: {
 		return 0;
@@ -282,7 +310,9 @@ int DynamicDialog::calculateFieldHeight(const InputField& field) {
 		return fieldHeight;
 	}
 	case FieldType::CHECKBOX: {
-		return static_cast<int>(_STATE->textsize2 * 1.2f);
+		// Same as every other row: layoutFields advances by fieldHeight, and
+		// a smaller value here made the height sum lie per checkbox.
+		return fieldHeight;
 	}
 	case FieldType::TEXT_DESCRIPTION: {
 		return field.descriptionHeight;
@@ -322,21 +352,13 @@ void DynamicDialog::drawField(SkCanvas* c, InputField& field, int fieldIndex) {
 }
 
 void DynamicDialog::drawCheckbox(SkCanvas* c, InputField& field, int yPos) {
+	// The label is the static pass's job (drawFieldLabel), same as for text
+	// inputs - this draws only the box, at the input rect layoutFields gave
+	// the row (which already accounts for a label wider than labelWidth).
 	const int checkboxSize = static_cast<int>(_STATE->textsize2 * 0.8f);
-	int checkboxX, labelX, labelY;
-
-	if (field.labelPosition == LabelPosition::LEFT) {
-		checkboxX = fieldSpacing + labelWidth + labelSpacing;
-		labelX = fieldSpacing;
-		labelY = yPos + static_cast<int>(_STATE->textsize2 * 0.7f);
-	}
-	else {
-		checkboxX = fieldSpacing;
-		labelX = fieldSpacing;
-		labelY = yPos - fieldSpacing / 2;
-	}
-
-	const int checkboxY = yPos + (calculateFieldHeight(field) - checkboxSize) / 2;
+	const int checkboxX = field.labelPosition == LabelPosition::LEFT
+		? field.input.startx.load() : fieldSpacing;
+	const int checkboxY = yPos + (field.input.height - checkboxSize) / 2;
 
 	// Draw checkbox border
 	SkPaint borderPaint;
@@ -365,17 +387,6 @@ void DynamicDialog::drawCheckbox(SkCanvas* c, InputField& field, int yPos) {
 		c->drawLine(x1, y1, x2, y2, checkPaint);
 		c->drawLine(x2, y2, x3, y3, checkPaint);
 	}
-
-	// Draw label
-	SkPaint textPaint;
-	textPaint.setAntiAlias(true);
-	textPaint.setColor(skcol::text);
-
-	SkFont& font = _STATE->font_normal;
-	font.setSize(_STATE->textsize2 * 0.9f);
-
-	c->drawSimpleText(field.label.c_str(), field.label.size(), SkTextEncoding::kUTF8,
-		labelX, labelY, font, textPaint);
 }
 
 const char* DynamicDialog::sliderFormat(const InputField&) {
@@ -565,6 +576,31 @@ void DynamicDialog::drawButtons(SkCanvas* c) {
 
 			c->drawSimpleText(customButtonLabel.c_str(), customButtonLabel.size(), SkTextEncoding::kUTF8,
 				currentX + textX, buttonY + y1, font, paint);
+		}
+		break;
+	}
+	case ButtonMode::OK_CANCEL_CUSTOM: {
+		// Three across, same geometry as the hit test in getElementAt:
+		// custom | cancel | ok.
+		const char* labels[3] = { customButtonLabel.c_str(), cancelLabel.c_str(),
+		                          okLabel.c_str() };
+		const bool visible[3] = { !customButtonLabel.empty(), showCancelButton,
+		                          showOkButton };
+		for (int i = 0; i < 3; i++) {
+			if (!visible[i]) continue;
+			const int bx = fieldSpacing * (i + 1) + buttonW * i;
+			if (drawButtonRect) {
+				paint.setStyle(SkPaint::kStroke_Style);
+				paint.setStrokeWidth(1.0f);
+				paint.setColor(skcol::text);
+				c->drawRect(SkRect::MakeXYWH(bx, buttonY, buttonW, buttonHeight), paint);
+			}
+			paint.setStyle(SkPaint::kFill_Style);
+			paint.setColor(skcol::text);
+			float textX, textY;
+			measureTextFixed(buttonW, buttonHeight, font, labels[i], &textX, &textY, _STATE->textsize2 * 0.9f);
+			c->drawSimpleText(labels[i], strlen(labels[i]), SkTextEncoding::kUTF8,
+				bx + textX, buttonY + textY, font, paint);
 		}
 		break;
 	}
@@ -879,6 +915,17 @@ void DynamicDialog::render(void* /*ctx*/) {
 				drawSlider(c, *field);
 				continue;
 			}
+			// Same for checkboxes and descriptions: rendering their dormant
+			// TextInput instead painted an empty input box over the row (and
+			// over the label) - drawCheckbox was never reached from here.
+			if (field->fieldType == FieldType::CHECKBOX) {
+				drawCheckbox(c, *field, field->input.starty);
+				continue;
+			}
+			if (field->fieldType == FieldType::TEXT_DESCRIPTION) {
+				drawTextDescription(c, *field, field->input.starty);
+				continue;
+			}
 
 			// Handle password masking
 			if (field->isPassword) {
@@ -898,12 +945,12 @@ void DynamicDialog::render(void* /*ctx*/) {
 	if (!fields.empty() && showKeyboard && !staticMode) {
 		keyboard.render(nullptr);
 
-		// Held-key repeat pulse: any typeable key, honouring the shift state
+		// Held-key repeat pulse (on-screen hold): honours the on-screen latch
 		if (int rk = keyboard.consumeRepeatKeyPulse(); rk >= 0) {
-			_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
 			InputEvent rep{};
 			rep.action = ACTION_KEY_UP;
 			rep.pointer_id = rk;
+			rep.mods = (keyboard.isShift() || keyboard.isCaps()) ? MOD_SHIFT : 0;
 			if (auto current = getCurrentInput()) {
 				current->callback(rep);
 			}
@@ -998,11 +1045,7 @@ void DynamicDialog::callback(const InputEvent& e) {
 			int ret = keyboard.cb(e);
 			if (ret != -1) {
 				if (ret == -2) return; // consumed visually
-				if (ret == VKEY_SHIFT || ret == VKEY_CAPITAL) {
-					_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
-					return;
-				}
-				_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
+				if (ret == VKEY_SHIFT || ret == VKEY_CAPITAL) return; // latch lives in the keyboard
 				if (ret == VKEY_RETURN || ret == VKEY_ESCAPE || ret == VKEY_TAB ||
 					ret == VKEY_UP || ret == VKEY_DOWN) {
 					handleConfirmCancel(ret);
@@ -1011,14 +1054,14 @@ void DynamicDialog::callback(const InputEvent& e) {
 				InputEvent e2 = e;
 				e2.action = ACTION_KEY_UP;
 				e2.pointer_id = ret;
+				// On-screen keys carry the latch state with the injected event
+				e2.mods = (keyboard.isShift() || keyboard.isCaps()) ? MOD_SHIFT : 0;
 				if (auto current = getCurrentInput()) {
 					current->callback(e2);
 				}
 				// One-shot shift
-				if (keyboard.isShift() && !keyboard.isCaps()) {
+				if (keyboard.isShift() && !keyboard.isCaps())
 					keyboard.toggleShift(false);
-					_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
-				}
 				return;
 			}
 		}
@@ -1102,17 +1145,7 @@ void DynamicDialog::callback(const InputEvent& e) {
 		if (ret != -1) {
 			if (ret == -2) return; // consumed visually
 
-			// Handle shift/caps
-			if (ret == VKEY_SHIFT || ret == VKEY_CAPITAL) {
-				_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
-				return;
-			}
-
-			_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
-
-			InputEvent e2 = e;
-			e2.action = ACTION_KEY_UP;
-			e2.pointer_id = ret;
+			if (ret == VKEY_SHIFT || ret == VKEY_CAPITAL) return; // latch lives in the keyboard
 
 			if (ret == VKEY_RETURN || ret == VKEY_ESCAPE || ret == VKEY_TAB ||
 				ret == VKEY_UP || ret == VKEY_DOWN) {
@@ -1120,121 +1153,93 @@ void DynamicDialog::callback(const InputEvent& e) {
 				return;
 			}
 
+			InputEvent e2 = e;
+			e2.action = ACTION_KEY_UP;
+			e2.pointer_id = ret;
+			// On-screen keys carry the latch state with the injected event
+			e2.mods = (keyboard.isShift() || keyboard.isCaps()) ? MOD_SHIFT : 0;
+
 			if (auto current = getCurrentInput()) {
 				current->callback(e2);
 			}
 
 			// One-shot shift
-			if (keyboard.isShift() && !keyboard.isCaps()) {
+			if (keyboard.isShift() && !keyboard.isCaps())
 				keyboard.toggleShift(false);
-				_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
-			}
 			return;
 		}
 
-		// Handle hardware keyboard
+		// Hardware keyboard: edits (characters, backspace, arrows) commit on
+		// KEY_DOWN with THAT event's own modifier snapshot — OS auto-repeats
+		// each type, and chord release order cannot flip the character.
+		// Modifier edges only drive the on-screen label latch (preview).
+		// Return/Escape/Tab/field-nav stay on KEY_UP so a press that closes
+		// the dialog cannot leak its release into the view focused next.
 		if (e.action == ACTION_KEY_DOWN) {
 			keyboard.setHardwareKeyHighlight(e.pointer_id, true);
 
-			if (e.pointer_id == VKEY_SHIFT || e.pointer_id == VKEY_LSHIFT || e.pointer_id == VKEY_RSHIFT) {
-				if (!keyboard.isShift()) {
-					keyboard.toggleShift(true);
-					_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
-				}
+			// Alt latches like Shift: the layouts have no Alt layer
+			if (e.pointer_id == VKEY_SHIFT || e.pointer_id == VKEY_LSHIFT || e.pointer_id == VKEY_RSHIFT ||
+				e.pointer_id == VKEY_MENU || e.pointer_id == VKEY_LMENU || e.pointer_id == VKEY_RMENU) {
+				if (!keyboard.isShift()) keyboard.toggleShift(true);
 				return;
 			}
-#ifdef OS_MAC
-			// macOS may send VKEY_CAPITAL for Caps Lock via flagsChanged
-			// and modifier state may arrive as synthetic ACTION_KEY_DOWN/UP pairs
-			if (e.pointer_id == VKEY_LSHIFT || e.pointer_id == 0x38) { // 0x38 = macOS left shift scancode
-				keyboard.toggleShift(true);
-				_STATE->shiftPressed = true;
-				return;
-			}
-#endif
 			if (e.pointer_id == VKEY_CAPITAL) {
 				return;
 			}
-			// OS auto-repeat arrives as additional KEY_DOWNs while a key is
-			// held; typing only on KEY_UP silently dropped them all. The
-			// repeats type here, and the eventual release is swallowed below
-			// so a held key does not end on one extra character.
-			if (VKeyTypesCharacter(e.pointer_id)) {
-				if (e.pointer_id == hwHeldVkey_) {
-					_STATE->shiftPressed = _STATE->shiftPressed || keyboard.isShift() || keyboard.isCaps();
-					InputEvent e2 = e;
-					e2.action = ACTION_KEY_UP;
-					if (auto current = getCurrentInput()) {
-						current->callback(e2);
-						hwRepeated_ = true;
-					}
+			if (KeyEventEdits(e.pointer_id, e.keychar)) {
+				InputEvent e2 = e;
+				e2.action = ACTION_KEY_UP;
+				e2.mods = FoldHwShift(e.mods, keyboard.isCaps());
+				if (auto current = getCurrentInput()) {
+					current->callback(e2);
 				}
-				else hwHeldVkey_ = e.pointer_id;
 			}
 			return;
 		}
 		else if (e.action == ACTION_KEY_UP) {
 			keyboard.setHardwareKeyHighlight(e.pointer_id, false);
 
-			if (e.pointer_id == VKEY_SHIFT || e.pointer_id == VKEY_LSHIFT || e.pointer_id == VKEY_RSHIFT) {
-				if (keyboard.isShift()) {
-					keyboard.toggleShift(false);
-					_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
-				}
+			if (e.pointer_id == VKEY_SHIFT || e.pointer_id == VKEY_LSHIFT || e.pointer_id == VKEY_RSHIFT ||
+				e.pointer_id == VKEY_MENU || e.pointer_id == VKEY_LMENU || e.pointer_id == VKEY_RMENU) {
+				if (keyboard.isShift()) keyboard.toggleShift(false);
 				return;
 			}
-
-#ifdef OS_MAC
-			// macOS may send VKEY_CAPITAL for Caps Lock via flagsChanged
-			// and modifier state may arrive as synthetic ACTION_KEY_DOWN/UP pairs
-			if (e.pointer_id == VKEY_LSHIFT || e.pointer_id == 0x38) { // 0x38 = macOS left shift scancode
-				keyboard.toggleShift(true);
-				_STATE->shiftPressed = true;
-				return;
-			}
-#endif
 
 			if (e.pointer_id == VKEY_CAPITAL) {
 				keyboard.toggleCaps();
-				_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
 				return;
 			}
 
 			if (e.pointer_id == VKEY_RETURN || e.pointer_id == VKEY_ESCAPE ||
 				e.pointer_id == VKEY_TAB || e.pointer_id == VKEY_UP || e.pointer_id == VKEY_DOWN) {
-				handleConfirmCancel(e.pointer_id);
+				handleConfirmCancel(e.pointer_id, (e.mods & (MOD_SHIFT | MOD_ALT)) != 0);
 				return;
 			}
-
-			if (e.pointer_id == hwHeldVkey_) hwHeldVkey_ = -1;
-			if (hwRepeated_) { hwRepeated_ = false; return; } // repeats already typed this key
-
-			_STATE->shiftPressed = _STATE->shiftPressed || keyboard.isShift() || keyboard.isCaps();
-
-			if (auto current = getCurrentInput()) {
-				current->callback(e);
-			}
-
-			if (keyboard.isShift() && !keyboard.isCaps()) {
-				keyboard.toggleShift(false);
-				_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
-			}
-			return;
+			return; // typing already happened on KEY_DOWN
 		}
 	}
 	else {
-		// No keyboard - handle hardware keys directly for fields
-		if (!fields.empty() && (e.action == ACTION_KEY_UP)) {
-			if (e.pointer_id == VKEY_RETURN || e.pointer_id == VKEY_ESCAPE ||
-				e.pointer_id == VKEY_TAB || e.pointer_id == VKEY_UP || e.pointer_id == VKEY_DOWN) {
-				handleConfirmCancel(e.pointer_id);
-				return;
-			}
-
-			if (auto current = getCurrentInput()) {
-				current->callback(e);
+		// No on-screen keyboard - hardware keys drive the fields directly.
+		// Same convention as above: edits on KEY_DOWN, confirm/nav on KEY_UP.
+		if (!fields.empty() && e.action == ACTION_KEY_DOWN) {
+			if (KeyEventEdits(e.pointer_id, e.keychar)) {
+				InputEvent e2 = e;
+				e2.action = ACTION_KEY_UP;
+				e2.mods = FoldHwShift(e.mods, false);
+				if (auto current = getCurrentInput()) {
+					current->callback(e2);
+				}
 			}
 			return;
+		}
+		if (!fields.empty() && e.action == ACTION_KEY_UP) {
+			if (e.pointer_id == VKEY_RETURN || e.pointer_id == VKEY_ESCAPE ||
+				e.pointer_id == VKEY_TAB || e.pointer_id == VKEY_UP || e.pointer_id == VKEY_DOWN) {
+				handleConfirmCancel(e.pointer_id, (e.mods & (MOD_SHIFT | MOD_ALT)) != 0);
+				return;
+			}
+			return; // typing already happened on KEY_DOWN
 		}
 	}
 }
@@ -1277,9 +1282,11 @@ void DynamicDialog::handleTap(const InputEvent& e) {
 			break;
 		}
 		case ButtonMode::OK_CANCEL: {
-			// Existing OK_CANCEL logic
-			const int okX = x + w - buttonW * 2 - fieldSpacing;
-			const int cancelX = x + w - buttonW - fieldSpacing / 2;
+			// Positions must match drawButtons/getElementAt: cancel LEFT, ok
+			// RIGHT (they were swapped here - the visual CANCEL submitted when
+			// a drag past the threshold dropped the tap into this fallback).
+			const int cancelX = x + w - buttonW * 2 - fieldSpacing;
+			const int okX = x + w - buttonW - fieldSpacing / 2;
 
 			if (showOkButton && e.x >= okX && e.x <= okX + buttonW &&
 				e.y >= buttonY && e.y <= buttonY + buttonHeight) {
@@ -1300,6 +1307,26 @@ void DynamicDialog::handleTap(const InputEvent& e) {
 				if (customButtonCallback) {
 					customButtonCallback();
 				}
+				return;
+			}
+			break;
+		}
+		case ButtonMode::OK_CANCEL_CUSTOM: {
+			// custom | cancel | ok - same geometry as getElementAt/drawButtons.
+			if (e.y < buttonY || e.y > buttonY + buttonHeight) break;
+			const int customX = x + fieldSpacing;
+			const int cancelX = x + fieldSpacing * 2 + buttonW;
+			const int okX = x + fieldSpacing * 3 + buttonW * 2;
+			if (!customButtonLabel.empty() && e.x >= customX && e.x <= customX + buttonW) {
+				if (customButtonCallback) customButtonCallback();
+				return;
+			}
+			if (showCancelButton && e.x >= cancelX && e.x <= cancelX + buttonW) {
+				cancelDialog();
+				return;
+			}
+			if (showOkButton && e.x >= okX && e.x <= okX + buttonW) {
+				submitDialog();
 				return;
 			}
 			break;
@@ -1438,8 +1465,15 @@ void DynamicDialog::layoutFields() {
 			field->input.width = w - (fieldSpacing * 2);
 		}
 		else {
-			// Label left: input starts after label + spacing
-			field->input.startx = fieldSpacing + labelWidth + labelSpacing;
+			// Label left: input starts after label + spacing. A label wider
+			// than the labelWidth column pushes its input right instead of
+			// running under it ("USE TRACK SOUND" was cut by the input rect).
+			SkFont font(_STATE->font_normal);
+			font.setSize(_STATE->textsize2 * 0.9f);
+			const int measured = (int)font.measureText(
+				field->label.c_str(), field->label.size(), SkTextEncoding::kUTF8);
+			field->input.startx = fieldSpacing +
+				std::max(labelWidth, measured + labelSpacing) + labelSpacing;
 			field->input.starty = currentY;
 			field->input.width = w - field->input.startx - fieldSpacing;
 		}
@@ -1517,7 +1551,7 @@ void DynamicDialog::cancelDialog() {
 	}
 }
 
-void DynamicDialog::handleConfirmCancel(int vkey) {
+void DynamicDialog::handleConfirmCancel(int vkey, bool shiftTab) {
 	if (vkey == VKEY_RETURN) {
 		// "Last field" means last TEXT field: trailing sliders/checkboxes
 		// cannot take a caret, so Return on the final typed field submits.
@@ -1541,7 +1575,7 @@ void DynamicDialog::handleConfirmCancel(int vkey) {
 	}
 
 	if (vkey == VKEY_TAB) {
-		if (_STATE->shiftPressed) {
+		if (shiftTab) {
 			prevField();
 		}
 		else {
@@ -1611,6 +1645,16 @@ void DynamicDialog::drawFieldLabel(SkCanvas* c, InputField& field, int yPos) {
 	else {
 		// Draw label to the left of the input field using baseline alignment
 		float labelY = field.input.starty + labelBaseLine;
+		if (field.fieldType == FieldType::CHECKBOX) {
+			// No inner text to baseline-align with: put the text's optical
+			// center on the box center (box = row center). Cap height from
+			// font metrics, not ink bounds - measured bounds proved loose on
+			// this backend and sat the label near the row bottom.
+			SkFontMetrics fm{};
+			font.getMetrics(&fm);
+			const float capH = fm.fCapHeight > 0.f ? fm.fCapHeight : fs * .7f;
+			labelY = field.input.starty + field.input.height * .5f + capH * .5f;
+		}
 		c->drawSimpleText(field.label.c_str(), field.label.size(), SkTextEncoding::kUTF8,
 			fieldSpacing, labelY, font, paint);
 	}

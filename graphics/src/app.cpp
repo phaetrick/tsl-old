@@ -116,6 +116,35 @@ tsl::AppState::AppState(std::function<void()> onDestroy) : onDestroy_{std::move(
 
 tsl::AppState::~AppState() {
 	destroyRequested.store(true, std::memory_order_release);
+	// CLOSE THE DOOR ON THE SNAPSHOT DRAIN THREAD BEFORE ANYTHING ELSE.
+	//
+	// startSnapshotDrainThread (setup.cpp) opens with
+	// `if (snapshotDrainActive.exchange(true)) return;` -- so a flag that is
+	// already true turns every later call into a no-op. Setting it here is what
+	// stops a start that arrives DURING teardown from creating the thread again
+	// behind the join below.
+	//
+	// AND ONE DOES ARRIVE, THOUGH THE PLAYER HAS ALREADY BEEN STOPPED. That is
+	// the part worth writing down, because the sequence reads as if it could not
+	// happen: destroyEngine (host.cpp) stops the player, and only then deletes
+	// this. But POWER is not a call, it is a QUEUED TASK -- setEnginePower does
+	// `_DATA->snapShot.add_taskInt([...]{ ...player.play(); })` so that the UI
+	// thread is not held for the length of the fade -- and a power-ON queued a
+	// moment before teardown is still in that queue when the player is stopped.
+	// The snapshot worker drains it afterwards, on its own thread, and the stack
+	// is
+	//
+	//   MPSCWorker<256>::run -> drain -> setEnginePower's lambda
+	//     -> Player::play -> onPlayerStart -> startSnapshotDrainThread
+	//
+	// measured 1 to 4 times per run of the layout suite. So the player is
+	// stopped and then started again, by an instruction that was already in
+	// flight. Stopping THAT is destroyEngine's business -- shutting the snapshot
+	// worker down before stopping the player would discard the task instead of
+	// running it -- and it is not done here. What is here is this destructor
+	// refusing to be destroyed with a live thread in it, which is what an
+	// AppState owes whatever path deleted it.
+	snapshotDrainActive.store(true, std::memory_order_release);
 	waitNotify.shutdown();
     if(integrityThread.joinable())
         integrityThread.join();
@@ -124,6 +153,24 @@ tsl::AppState::~AppState() {
 	UiTasksQueue.shutdown();
 	WorkerQueue.shutdown();
 	RecordingQueue.shutdown();
+	// THE SNAPSHOT DRAIN THREAD, AGAIN, and this is the join that matters.
+	//
+	// Between the join above and here, the queued power-on described at the top
+	// of this function can reach Player::play() and raise onPlayerStart, and
+	// startSnapshotDrainThread creates the thread a second time. The member is
+	// then joinable when it is destroyed, and std::thread's destructor answers
+	// that with std::terminate: "terminate called without an active exception",
+	// from a destructor, with no exception anywhere in the program.
+	//
+	// It has to be HERE and not further down, because onDestroy_ deletes
+	// AppState::data and the drain loop reads _DATA->snapShot. The abort was the
+	// visible half of that race; the use-after-free was the quiet one.
+	//
+	// Safe by construction: destroyRequested is already set and waitNotify is
+	// already shut down, so a thread created this late falls straight out of
+	// wait_for_signal (WaitNotify.cpp:59) and returns without touching anything.
+	if(snapshotDrainThread.joinable())
+	    snapshotDrainThread.join();
 	if(onDestroy_)
 	    onDestroy_();
 	pool.printStats();

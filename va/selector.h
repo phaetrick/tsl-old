@@ -6,6 +6,7 @@
 #define GRAINSTORM_Selector_H
 
 #include <atomic>
+#include <climits>
 #ifdef __ANDROID__
 #include <jni.h>
 #endif
@@ -27,6 +28,7 @@
 #include "sequencer.h"
 #include "preset.h"
 #include "VelocityTracker.h"
+#include "presetbrowser.h"
 
 
     namespace tsl::graphics{
@@ -473,6 +475,15 @@ protected:
 
         int i = 0;
         for (auto &s : _DATA->presets) {
+            // `values` holds indices into _DATA->presets (loadPreset takes them
+            // straight), so hiding a row must skip the row, never renumber the
+            // rest. Default is isSystem too but sits at date LONG_MAX, above the
+            // factory bank's LONG_MAX-1-downward range — it is not part of the
+            // bank and always stays on top.
+            const int idx = i++;
+            if (s.isSystem && s.date != LONG_MAX &&
+                !_DATA->showFactoryPresets.load(std::memory_order_relaxed))
+                continue;
             std::string tmp(s.name);
             if (avail > 0.f && textWidth(tmp) > avail) {
                 while (tmp.size() > 1) {
@@ -482,7 +493,7 @@ protected:
                 tmp.append("..");
             }
             names.push_back(tmp);
-            values.push_back(i++);
+            values.push_back(idx);
             if (s.date == _DATA->presetDate) {
                 _STATE->params[0][id] = names.size() - 1;
             }
@@ -497,6 +508,44 @@ protected:
         _STATE->parameters[id].values = values;
         popupview.init();
         View::addRecursiveDraw();
+    }
+
+public:
+    // Tapping LOAD PRESET opens the dedicated browser rather than the flat popup:
+    // a single 75-entry list is what the browser exists to replace. Gesture handling
+    // mirrors Selector2::callback (press highlights, a drag past the slop cancels)
+    // so the control still feels the same.
+    void callback(const InputEvent &event) override {
+        if (disabled)
+            return;
+        switch (event.action) {
+            case ACTION_DOWN:
+                hot = true;
+                inputstate.addPointer({event.pointer_id, event.x - startx, event.y - starty,
+                    tsl::graphics::InputSystem::WinState::WINPOINTER, 0});
+                redraw();
+                break;
+            case ACTION_MOVE: {
+                auto pt = inputstate.getById(event.pointer_id);
+                if (pt && pt->distanceTo(event.x - startx, event.y - starty) > _STATE->textsize2) {
+                    inputstate.removePointer(event.pointer_id);
+                    hot = false;
+                    redraw();
+                }
+                break;
+            }
+            case ACTION_UP:
+                if (inputstate.getById(event.pointer_id)) {
+                    hot = false;
+                    redraw();
+                    inputstate.clear();
+                    tsl::graphics::PresetBrowserView::activate(_appState);
+                    return;
+                }
+                break;
+            default:
+                break;
+        }
     }
 
 private:

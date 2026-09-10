@@ -23,6 +23,8 @@
 #include "sequencer.h"
 #include "synth.h"
 #include <app.h>
+#include <settings.h>
+#include <tools/PlatformPaths.h>
 #include "envelope.h"
 
 #if DEBUG_ENABLED == 1
@@ -926,6 +928,45 @@ static void initparams(tsl::AppState* _appState) {
     _STATE->parameters[CDDELMODDEPTH].initvalue = 0.f;
     _STATE->parameters[CDDELMODDEPTH].progress = .01;
 
+    // ---- ensemble chorus ----------------------------------------------------
+    // An FX unit like the phaser/delay/reverb: POWER carries no initvalue, so it
+    // is off until a preset asks for it and the other 75 are untouched.
+    _STATE->parameters[CHORUSPOW].type = ParameterType_bool;
+    _STATE->parameters[CHORUSPOW].category = "CHORUS"; _STATE->parameters[CHORUSPOW].name = "POWER";
+
+    _STATE->parameters[CHORUSMIX].min = 0.f;
+    _STATE->parameters[CHORUSMIX].max = 1.f;
+    _STATE->parameters[CHORUSMIX].category = "CHORUS";
+    _STATE->parameters[CHORUSMIX].name = "MIX";
+    _STATE->parameters[CHORUSMIX].valuename = " ";
+    _STATE->parameters[CHORUSMIX].type = ParameterType_double;
+    _STATE->parameters[CHORUSMIX].digits = 2;
+    // Near fully wet by default. On a string machine the ensemble is not an effect
+    // over the oscillators, it IS the voice — and the dry path is what makes the
+    // wet sum comb against it and read as a phaser.
+    _STATE->parameters[CHORUSMIX].initvalue = .9f;
+    _STATE->parameters[CHORUSMIX].progress = .01;
+
+    _STATE->parameters[CHORUSDEPTH].min = .2f;
+    _STATE->parameters[CHORUSDEPTH].max = 4.f;
+    _STATE->parameters[CHORUSDEPTH].category = "CHORUS";
+    _STATE->parameters[CHORUSDEPTH].name = "DEPTH";
+    _STATE->parameters[CHORUSDEPTH].valuename = "MS";
+    _STATE->parameters[CHORUSDEPTH].type = ParameterType_double;
+    _STATE->parameters[CHORUSDEPTH].digits = 2;
+    _STATE->parameters[CHORUSDEPTH].initvalue = 1.f;
+    _STATE->parameters[CHORUSDEPTH].progress = .01;
+
+    _STATE->parameters[CHORUSRATE].min = .05f;
+    _STATE->parameters[CHORUSRATE].max = 3.f;
+    _STATE->parameters[CHORUSRATE].category = "CHORUS";
+    _STATE->parameters[CHORUSRATE].name = "RATE";
+    _STATE->parameters[CHORUSRATE].valuename = "HZ";
+    _STATE->parameters[CHORUSRATE].type = ParameterType_double;
+    _STATE->parameters[CHORUSRATE].digits = 2;
+    _STATE->parameters[CHORUSRATE].initvalue = .58f;
+    _STATE->parameters[CHORUSRATE].progress = .01;
+
     _STATE->parameters[JITTERCENTS].min = 0.f;
     _STATE->parameters[JITTERCENTS].max = 100.f;
     _STATE->parameters[JITTERCENTS].name = "JITTER";
@@ -1231,9 +1272,14 @@ static void initparams(tsl::AppState* _appState) {
 
         _STATE->parameters[destId].name = "DEST";
         _STATE->parameters[destId].category = category;
+        // min stays 0 and names keeps its OFF row so a legacy 0 (old projects,
+        // stray automation) is still in range and displayable on the host side;
+        // the app's selector lists 1..21 only, init points the cursor at PITCH,
+        // and foldLegacyLfoRoutes remaps a loaded 0 to 1. Old presets almost
+        // never STORED 0 — sparse saves skip values equal to init, which was 0.
         _STATE->parameters[destId].min = 0.f;
         _STATE->parameters[destId].max = 21.f;
-        _STATE->parameters[destId].initvalue = 0.f;
+        _STATE->parameters[destId].initvalue = 1.f;
         _STATE->parameters[destId].type = ParameterType_enum;
         _STATE->parameters[destId].names = lfoDestNames;
 
@@ -1259,6 +1305,31 @@ static void initparams(tsl::AppState* _appState) {
     };
     setupLfo(LFO1RATE, LFO1DEPTH, LFO1WAVE, LFO1DEST, LFO1PHASE, "LFO1");
     setupLfo(LFO2RATE, LFO2DEPTH, LFO2WAVE, LFO2DEST, LFO2PHASE, "LFO2");
+    setupLfo(LFO3RATE, LFO3DEPTH, LFO3WAVE, LFO3DEST, LFO3PHASE, "LFO3");
+    setupLfo(LFO4RATE, LFO4DEPTH, LFO4WAVE, LFO4DEST, LFO4PHASE, "LFO4");
+
+    // The multi-dest matrix: one bipolar depth per (LFO, dest). Same shape as the
+    // DEPTH knob above (which is a UI window onto the selected dest's slot — see
+    // lfoWindowTick in synth.cpp). Named after the destination so the host's
+    // automation list reads "LFO3: MORPH2" rather than a bare index.
+    {
+        static const char* lfoCats[4] = {"LFO1", "LFO2", "LFO3", "LFO4"};
+        for (int n = 0; n < 4; n++) {
+            for (int d = 1; d <= LFO_MD_NDEST; d++) {
+                auto& p = _STATE->parameters[lfoMdId(n, d)];
+                // string_view over a literal — .data() is null-terminated here
+                p.name = lfoDestNames[d].data();
+                p.category = lfoCats[n];
+                p.min = -1.f;
+                p.max = 1.f;
+                p.initvalue = 0.f;
+                p.type = ParameterType_double;
+                p.digits = 2;
+                p.valuename = " ";
+                p.flags |= Param::CentreFill;
+            }
+        }
+    }
 
     _STATE->parameters[FILT_CUT].min = 0.f;
     _STATE->parameters[FILT_CUT].max = 1.f;
@@ -1387,6 +1458,8 @@ static void initparams(tsl::AppState* _appState) {
         VCO3COARSEST,
         LFO1RATE, LFO1DEPTH, LFO1WAVE, LFO1DEST, LFO1PHASE,
         LFO2RATE, LFO2DEPTH, LFO2WAVE, LFO2DEST, LFO2PHASE,
+        LFO3RATE, LFO3DEPTH, LFO3WAVE, LFO3DEST, LFO3PHASE,
+        LFO4RATE, LFO4DEPTH, LFO4WAVE, LFO4DEST, LFO4PHASE,
         SEQ_STEPS, SEQ_SYNCDAW, SEQ_TIMEDIV, ARP_STEPS,   // SEQ_MODE removed: dead
         ZERONOTE, CLEARTASKS, WAITFORZERO, SEQLEARNING,
         NOTESETTINGSFROMSYNTH, SYNTHRESET, NONOTES, ARPRESET,
@@ -1439,6 +1512,49 @@ void java_set_hqresampling(JNIEnv *env, jclass obj, jboolean hqresampling) {
     _DATA->hqresampling.store((bool) hqresampling);
 }
 
+// Called from the Java settings screen (Android UI thread). The selector only
+// rebuilds its list in addRecursiveDraw, so push a rebuild like savePreset does;
+// if the native views are torn down behind the settings Activity, the visible_
+// guard skips it and the re-add on resume applies the flag instead.
+void java_set_showfactory(JNIEnv *env, jclass obj, jboolean show) {
+    tsl::AppState* _appState = __STATE;
+    if (_appState == nullptr) return;
+    _DATA->showFactoryPresets.store((bool) show);
+    _appState->toUiThreadQueue.try_push([_appState]() {
+        auto* sel = _DATA->views.presetSelector;
+        if (sel && sel->visible_) {
+            sel->addRecursiveDraw();
+            sel->redraw();
+        }
+    });
+}
+
+// The trial gate's verdict, from TrialGate.java's own thread. Arrives whenever
+// it resolves -- possibly before the UI exists, possibly minutes into a capped
+// session once the phone finds signal. The wall is a view, so raising one has to
+// happen on the UI thread; setTrialState only records the state when there is no
+// AppState yet, and startSessionCap reads it when the UI comes up.
+void java_set_trial_state(JNIEnv *env, jclass obj, jint state) {
+    tsl::AppState* _appState = __STATE;
+    if (_appState == nullptr) {
+        tsl::app::setTrialState(nullptr, (int) state);
+        return;
+    }
+    const int st = (int) state;
+    _appState->toUiThreadQueue.try_push([_appState, st]() {
+        tsl::app::setTrialState(_appState, st);
+    });
+}
+
+// Called from the Java worker that moved the preset folder. The bank has to be
+// re-read from wherever it now lives; Preset::reload queues that onto the UI
+// thread, since the deque belongs to it.
+void java_reload_presets(JNIEnv *env, jclass obj) {
+    tsl::AppState* _appState = __STATE;
+    if (_appState == nullptr) return;
+    Preset::reload(_appState);
+}
+
 void java_set_value(JNIEnv *env, jclass obj, jboolean logarithmic, jboolean convms, jlong _view,
                     jlong _ref, jlong _refmin,
                     jlong _refmax, jdouble _value, jdouble min, jdouble max, jstring _valname);
@@ -1475,13 +1591,17 @@ jstring java_ofl(JNIEnv *env, jclass obj);
 
 JNINativeMethod tsl::android::methodTable[] = {
         {"java_record_live",       "(I)I",                  (void *) java_record_live},
-        {"java_read_presets",      "()[Ljava/lang/Object;", (void *) java_read_presets},
         {"java_receive_midievent", "(BBB)V",                (void *) java_receive_midievent},
         {"save_midimapping_callback", "(Ljava/lang/String;)I", (void *) save_midimapping_callback},
         {"java_set_output_format", "(I)V",                  (void *) java_set_output_format},
         {"java_set_micrec_format", "(I)V",                  (void *) java_set_micrec_format},
+        // hqresampling was declared+called in Java but never in this table — an
+        // UnsatisfiedLinkError lying in wait behind its (currently hidden) pref.
+        {"java_set_hqresampling",  "(Z)V",                  (void *) java_set_hqresampling},
+        {"java_set_showfactory",   "(Z)V",                  (void *) java_set_showfactory},
+        {"java_reload_presets",    "()V",                   (void *) java_reload_presets},
+        {"java_set_trial_state",   "(I)V",                  (void *) java_set_trial_state},
         {"java_control",           "(I)V",                  (void *) java_control},
-        {"java_delete_preset",     "(J)I",                  (void *) java_delete_preset},
         {"java_ofl",               "()Ljava/lang/String;",  (void *) java_ofl},
         {"guiSetup",               "(ZII)V",                (void *) guiSetup},
 };
@@ -1627,9 +1747,9 @@ tsl::AppState* tsl::app::setup(bool /*uisRunningAsPlugin*/) {
                 env->ExceptionClear();
             }
 
-            fid = env->GetStaticFieldID(appclazz, "savedBufSize", "I");
+            fid = env->GetStaticFieldID(appclazz, "showFactoryPresets", "Z");
             if (fid) {
-                _STATE->maxBufSize = env->GetStaticIntField(appclazz, fid);
+                _DATA->showFactoryPresets.store((bool)env->GetStaticBooleanField(appclazz, fid));
             } else {
                 env->ExceptionClear();
             }
@@ -1654,6 +1774,18 @@ tsl::AppState* tsl::app::setup(bool /*uisRunningAsPlugin*/) {
     }
     DETACH
 #else
+    {
+        // Desktop mirror of the JNI reads above. Settings2 fires intChangeCallback
+        // only on Set(), and the settings view itself is built lazily on first
+        // open, so persisted values must be applied here or a restart forgets
+        // them until the user visits Settings. Defaults match the XML in
+        // callbacks_loop_controls.cpp.
+        tsl::settings::SettingsManager mgr{ tsl::app::getStoragePath(tsl::app::appName) };
+        _STATE->format  = (uint8_t)mgr.Get("audio_format", 0);
+        _STATE->askName = mgr.Get("ask_name", false);
+        _DATA->hqresampling.store(mgr.Get("hq_resampling", false));
+        _DATA->showFactoryPresets.store(mgr.Get("show_factory", true));
+    }
 #endif
     Preset::setupDefault(_appState);
     Preset::setupFactory(_appState);

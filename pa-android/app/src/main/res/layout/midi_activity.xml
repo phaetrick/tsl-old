@@ -20,4 +20,10 @@
     <View
         android:layout_height="24dp"
         android:layout_width="match_parent"/>
+    <TextView
+        android:id="@+id/text_midi_status"
+        style="@style/SettingsTextviewMulti"
+        android:gravity="start"
+        android:text="@string/midi_status_idle"
+        />
 </LinearLayout>

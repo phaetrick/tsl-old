@@ -137,6 +137,7 @@ namespace tsl {
 			int        maxLen{ 99 };
 			int        _type{};
 			std::atomic<int>     cursor{ 0 };   // insertion caret
+			float      scrollX{ 0.f };          // viewport scroll when text overflows; render() keeps the caret inside
 			TextAlign textAlign = ALIGN_CENTER; // Add this member
 		};
 
@@ -284,7 +285,6 @@ namespace tsl {
 			void layoutKeys();
 			void drawKey(SkCanvas* c, const Key& k, SkFont& font, SkFont& fontIcon);
 			void updateActiveFromPoint(float ex, float ey);
-			void syncGlobalShiftFlag();
 			void startRepeat();
 			void stopRepeat();
 			void tickRepeat();
@@ -358,10 +358,6 @@ namespace tsl {
 		private:
 			// IMPORTANT: do NOT redeclare windowindex here; use the one from TextInputPopUp
 			AlphaKeyboard keyboard;
-			// Hardware auto-repeat state: the vkey currently held down, and
-			// whether its repeats already typed (then the release is silent).
-			int  hwHeldVkey_{ -1 };
-			bool hwRepeated_{ false };
 		};
 	} // namespace graphics
 } // namespace tsl

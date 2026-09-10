@@ -5,6 +5,7 @@
 #include "pianoview.h"
 #include <Midi.h>
 #include <app.h>
+#include <logger.h>
 using namespace tsl::graphics;
 using namespace tsl::midi;
 
@@ -170,6 +171,24 @@ void PianoScrollBar::callback(const InputEvent &event) {
             break;
 
         case ACTION_UP:
+            if (_pointerid == pointerid) {
+                // Double-tap → jump so the grabber lands centred on the tap.
+                // Detection is the Knob idiom: elapsedReplace() is the gap between
+                // consecutive releases in seconds. The mapping is the inverse of
+                // render()'s yoff = rest * (1 - offset) + lw * .5f.
+                if (timer.elapsedReplace() < .3) {
+                    float buttonheight = height * .15f;
+                    float rest = height - buttonheight - lw;
+                    float visual = (ypos - starty - lw * .5f - buttonheight * .5f) / rest;
+                    if (visual < 0.f)
+                        visual = 0.f;
+                    else if (visual > 1.f)
+                        visual = 1.f;
+                    ((PianoView *) parent)->offset.store(1.f - visual);
+                    redraw();
+                    ((PianoView *) parent)->piano.redraw();
+                }
+            }
             break;
         default:
             return;
@@ -218,10 +237,25 @@ void Piano::render(void *ctx) {
         init();
     }
     std::lock_guard<std::recursive_mutex> lk(_STATE->queue_draw);
+    // && , not || . With || the test is true for every key on the board (a key
+    // is essentially always either right of the left edge or left of the right
+    // one), so it culled nothing and all 63 + 44 keys were queued every frame
+    // although only ~15 are on screen.
+    //
+    // That mattered because queue_draw holds 250 views and add() SILENTLY drops
+    // on full -- View::redraw ignores the return and still marks the view
+    // visible. The piano alone was taking 107 of the 250, and Piano::render
+    // queues whites before blacks, so the keys that lost the race were always
+    // the black ones: "the keyboard sometimes doesn't draw its black keys".
     for (auto &w : whitekeys)
-        if (w.stopx >= parent->startx || w.startx < parent->stopx)
+        if (w.stopx >= parent->startx && w.startx < parent->stopx)
             w.redraw();
     for (auto &w : blackKeys)
-        if (w.stopx >= parent->startx || w.startx < parent->stopx)
+        if (w.stopx >= parent->startx && w.startx < parent->stopx)
             w.redraw();
+    // Silent truncation is what made this hard to see. Say so if it ever
+    // happens again -- the queue being full is never normal.
+    if (_STATE->queue_draw.isFull())
+        LOGE("Piano::render: draw queue full (%d views) - keys were dropped",
+             _STATE->queue_draw.size());
 }

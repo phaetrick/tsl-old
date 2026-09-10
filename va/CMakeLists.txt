@@ -1,5 +1,23 @@
 cmake_minimum_required(VERSION 3.15)
 
+# THE PREBUILT EXTERNALS -- Skia and friends. They live OUTSIDE any checkout, in
+# programming/sources/libraries, so every path to an archive or a Skia header
+# goes through this one variable instead of through the source tree or a
+# hand-rolled iPlug2 Dependencies path. Set here, above the platform split,
+# because this file is the top-level list file for the Android build: one
+# -DTSL_LIBS_ROOT=... reaches graphics too, which keeps the same default for
+# standalone configures. The HOST decides, not the target -- an Android build
+# reads these archives off the machine doing the building.
+if(NOT DEFINED TSL_LIBS_ROOT)
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+        set(TSL_LIBS_ROOT "C:/Users/phaet/programming/sources/libraries")
+    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+        set(TSL_LIBS_ROOT "/Users/patrickropohl/programming/sources/libraries")
+    else()
+        set(TSL_LIBS_ROOT "/home/pr/programming/sources/libraries")
+    endif()
+endif()
+
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Android")
 
 message(${ANDROID_ABI})
@@ -82,6 +100,7 @@ file(GLOB SOURCE_FILES
         ffttools.cpp
         buttonview.cpp
         preset.cpp
+        presetbrowser.cpp
         presetwindow.cpp
         EventHandler.cpp)
 
@@ -112,6 +131,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 
+# THE CHECKOUT'S OWN ROOT, derived from this file rather than from anyone's home
+# directory. Every path below that points INSIDE CPP-New goes through it, so the
+# tree builds wherever it is cloned -- a CI runner, a cloud session, a second
+# working copy -- and not only under <home>/programming/CPP-New. HOME_PATH stays
+# for the things that live OUTSIDE this repo (the iPlug2 fork, its Skia
+# checkout), which really are a property of the machine.
+get_filename_component(CPPNEW_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+
 if(NOT DEFINED HOME_PATH)
     if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
         set(HOME_PATH "C:/Users/phaet")
@@ -123,6 +150,7 @@ if(NOT DEFINED HOME_PATH)
         set(HOME_PATH "/home/pr")
     endif()
 endif()
+
 
 set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Allpass.cpp
@@ -144,6 +172,7 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/moogladder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/pianoview.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/preset.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/presetbrowser.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/random.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/reverbprogenitor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/selector.cpp
@@ -160,7 +189,7 @@ add_library(va STATIC ${SOURCE_FILES})
 
 target_include_directories(va PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../graphics
+    ${CPPNEW_ROOT}/graphics
 )
 
 target_link_libraries(va

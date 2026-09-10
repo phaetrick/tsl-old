@@ -155,6 +155,44 @@ void Event::afterChange(tsl::AppState* _appState) {
     // PA has no params with HasAfterChange — nothing to do
 }
 
+// ── LFO window/write-through ─────────────────────────────────────────────────
+// The DEST/DEPTH pair of each LFO is a WINDOW onto the multi-dest matrix: DEST is
+// the cursor, DEPTH shows and edits matrix[DEST]. Hooked HERE — Event::apply is
+// the one funnel every change source shares (knob, selector, MIDI learn, host
+// automation, undo) — and deliberately NOT on the audio thread: the first version
+// lived in synthFunc and the window went dead the moment audio wasn't processing
+// (ear-reported: switching DEST stopped re-seating the DEPTH knob).
+//   DEST moved  -> window refreshed from the newly selected slot + depth knob
+//                  repaint. Plain stores, no Event: browsing must neither edit
+//                  the patch nor spam host automation.
+//   DEPTH moved -> written through into the selected slot. Keeps old DAW
+//                  automation lanes on LFOnDEPTH working: they edit whatever
+//                  route the stored DEST points at.
+static void lfoWindowHook(tsl::AppState* _appState, int pid, MYFLOAT v) {
+    static const int destIds[4]  = {LFO1DEST,  LFO2DEST,  LFO3DEST,  LFO4DEST};
+    static const int depthIds[4] = {LFO1DEPTH, LFO2DEPTH, LFO3DEPTH, LFO4DEPTH};
+    for (int n = 0; n < 4; n++) {
+        if (pid == destIds[n]) {
+            const int dest = (int)v;
+            const MYFLOAT w = (dest >= 1 && dest <= LFO_MD_NDEST)
+                              ? _STATE->params[0][lfoMdId(n, dest)].load() : 0.;
+            _STATE->params[0][depthIds[n]].store(w);
+            const int did = depthIds[n];
+            _STATE->toUiThreadQueue.try_push([_STATE, did]() {
+                auto* kv = _STATE->parameters[did].view;
+                if (kv != nullptr && kv->visible_) kv->redraw();
+            });
+            return;
+        }
+        if (pid == depthIds[n]) {
+            const int dest = (int)_STATE->params[0][destIds[n]].load();
+            if (dest >= 1 && dest <= LFO_MD_NDEST)
+                _STATE->params[0][lfoMdId(n, dest)].store(v);
+            return;
+        }
+    }
+}
+
 // ── apply ────────────────────────────────────────────────────────────────────
 
 Event Event::apply(tsl::AppState* _appState, tsl::parameters::SenderFlags from) {
@@ -178,6 +216,7 @@ Event Event::apply(tsl::AppState* _appState, tsl::parameters::SenderFlags from) 
         // be invalidated separately or they keep showing the previous range.
         if (tsl::app::isModSource(paramIndex))
             tsl::app::redrawModTargets(_STATE);
+        lfoWindowHook(_STATE, paramIndex, value);
         if (param.flags & Param::HasAfterChange)
             afterChange(_STATE);
     }

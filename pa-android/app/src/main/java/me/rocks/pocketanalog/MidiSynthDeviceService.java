@@ -7,18 +7,29 @@ import android.media.midi.MidiReceiver;
 
 public class MidiSynthDeviceService extends MidiDeviceService {
     private static MidiEngine mMidiEngine = new MidiEngine();
-    private boolean midiStarted = false;
-    private static MidiSynthDeviceService mInstance;
+    // Static, and not tied to a service instance: the settings dialog asks for this
+    // before any status callback of its own has arrived, and the service instance
+    // comes and goes underneath it.
+    private static volatile boolean sInputPortOpen;
+    private static volatile StatusListener sStatusListener;
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        mInstance = this;
+    /** Told when a client opens or closes the input port this app exposes. */
+    interface StatusListener {
+        void onInputPortOpenChanged(boolean open);
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
+    /**
+     * Listen for clients of the exposed device. An external synth or sequencer that
+     * picked this app as its MIDI destination arrives here exactly like the settings
+     * dialog's own connection does -- the dialog tells the two apart itself, since it
+     * knows which one it made. Pass null to stop listening.
+     */
+    static void setStatusListener(StatusListener listener) {
+        sStatusListener = listener;
+    }
+
+    static boolean isInputPortOpen() {
+        return sInputPortOpen;
     }
 
     @Override
@@ -31,10 +42,14 @@ public class MidiSynthDeviceService extends MidiDeviceService {
      */
     @Override
     public void onDeviceStatusChanged(MidiDeviceStatus status) {
-        if (status.isInputPortOpen(0) && !midiStarted) {
-            midiStarted = true;
-        } else if (!status.isInputPortOpen(0) && midiStarted){
-            midiStarted = false;
+        boolean open = status.isInputPortOpen(0);
+        if (open == sInputPortOpen) {
+            return;
+        }
+        sInputPortOpen = open;
+        StatusListener listener = sStatusListener;
+        if (listener != null) {
+            listener.onInputPortOpenChanged(open);
         }
     }
 

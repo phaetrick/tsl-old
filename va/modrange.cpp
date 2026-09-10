@@ -68,8 +68,8 @@ inline float pushSum(tsl::AppState* s, std::initializer_list<int> routes) {
 // and the arc would claim the knob can be exceeded.
 inline float lfoFloor(tsl::AppState* s, int dest) {
     float f = 1.f;
-    if ((int)pval(s, LFO1DEST) == dest) f *= 1.f - std::fabs(pval(s, LFO1DEPTH));
-    if ((int)pval(s, LFO2DEST) == dest) f *= 1.f - std::fabs(pval(s, LFO2DEPTH));
+    for (int n = 0; n < 4; n++)
+        f *= 1.f - std::fabs(pval(s, lfoMdId(n, dest)));
     return f;
 }
 
@@ -84,8 +84,8 @@ inline float clamp01(float v) { return v < 0.f ? 0.f : (v > 1.f ? 1.f : v); }
 // audibly moves.
 inline float lfoDepth(tsl::AppState* s, int dest) {
     float d = 0.f;
-    if ((int)pval(s, LFO1DEST) == dest) d += std::fabs(pval(s, LFO1DEPTH));
-    if ((int)pval(s, LFO2DEST) == dest) d += std::fabs(pval(s, LFO2DEPTH));
+    for (int n = 0; n < 4; n++)
+        d += std::fabs(pval(s, lfoMdId(n, dest)));
     return d;
 }
 
@@ -234,7 +234,7 @@ bool modRangeFor2(tsl::AppState* s, int pid, float& lo, float& hi) {
     }
 
     // ---- one-sided targets: the LFO does not reach these, so lo == hi == endpoint ----
-    case LFO1DEPTH: case LFO2DEPTH: {
+    case LFO1DEPTH: case LFO2DEPTH: case LFO3DEPTH: case LFO4DEPTH: {
         // MW/AT pull the depth toward ZERO, which is below the knob for a positive depth
         // and above it for a negative one, so the two ends have to be ordered rather
         // than assumed. Ranges are drawn lo..hi and a swapped pair draws nothing.
@@ -243,7 +243,7 @@ bool modRangeFor2(tsl::AppState* s, int pid, float& lo, float& hi) {
         lo = std::min(v, atten); hi = std::max(v, atten);
         return floor < 1.f;
     }
-    case LFO1RATE: case LFO2RATE: {
+    case LFO1RATE: case LFO2RATE: case LFO3RATE: case LFO4RATE: {
         const float amt = pushSum(s, {MW_TO_LFORATE, AT_TO_LFORATE});
         const float knob = pval(s, pid);
         lo = knob; hi = knob + ((float)s->parameters[pid].max - knob) * amt;
@@ -307,7 +307,8 @@ static const int kModTargets[] = {
     VCO1WTPOS, VCO2WTPOS, VCO3WTPOS,
     VCO1WARPAMT, VCO2WARPAMT, VCO3WARPAMT,
     VCO1MODALDEC, VCO2MODALDEC, VCO3MODALDEC,
-    LFO1DEPTH, LFO2DEPTH, LFO1RATE, LFO2RATE,
+    LFO1DEPTH, LFO2DEPTH, LFO3DEPTH, LFO4DEPTH,
+    LFO1RATE, LFO2RATE, LFO3RATE, LFO4RATE,
     VCO1COARSE, VCO1FINE, VCO2COARSE, VCO2FINE, VCO3COARSEST, VCO3FINE,
     VCO1PW, VCO2PW, VCO3PW,
 #if PA_ENABLE_PAD
@@ -320,6 +321,9 @@ static const int kModTargets[] = {
 // yet: they cost nothing here, and including them means adding a target later is
 // a one-line change to kModTargets rather than a hunt for the missing source.
 bool isModSource(int pid) {
+    // The whole multi-dest matrix feeds mod ranges; a contiguous id block beats 84
+    // case labels.
+    if (pid >= LFO_MD_FIRST && pid <= LFO_MD_LAST) return true;
     switch (pid) {
     case VEL_TO_FILT: case VEL_TO_AMP: case VEL_TO_RES:
     case AT_TO_FILT:  case AT_TO_AMP:  case AT_TO_RES:  case AT_TO_VIBRATO:
@@ -330,6 +334,7 @@ bool isModSource(int pid) {
     case MW_TO_MORPH: case MW_TO_WARP:  case MW_TO_UNI: case MW_TO_DECAY:
     case KEYTRACK_TO_FILT: case KEYTRACK_TO_DECAY:
     case LFO1DEST: case LFO1DEPTH: case LFO2DEST: case LFO2DEPTH:
+    case LFO3DEST: case LFO3DEPTH: case LFO4DEST: case LFO4DEPTH:
     case FILTEG: case RESEG:
     case VCO1PWMODSRC: case VCO2PWMODSRC: case VCO3PWMODSRC:
     case VCO1PWMODDEPTH: case VCO2PWMODDEPTH: case VCO3PWMODDEPTH:

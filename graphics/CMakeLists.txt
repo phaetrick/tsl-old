@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.15)
 
 project(tslgraphics)
 
-get_filename_component(GRAINSTORM_OLD_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
-
 # Add static linking configuration at the top
 cmake_policy(SET CMP0091 NEW)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")  # Static linking for Windows
@@ -19,6 +17,14 @@ if (CMAKE_CXX_STANDARD VERSION_LESS 20)
 else ()
     message(STATUS "C++ standard is C++20 or higher. Using native char8_t.")
 endif ()
+
+# THE CHECKOUT'S OWN ROOT, derived from this file rather than from anyone's home
+# directory. Every path below that points INSIDE CPP-New goes through it, so the
+# tree builds wherever it is cloned -- a CI runner, a cloud session, a second
+# working copy -- and not only under <home>/programming/CPP-New. HOME_PATH stays
+# for the things that live OUTSIDE this repo (the iPlug2 fork, its Skia
+# checkout), which really are a property of the machine.
+get_filename_component(CPPNEW_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 
 if(NOT DEFINED HOME_PATH)
     if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
@@ -38,8 +44,14 @@ if(NOT DEFINED HOME_PATH)
     endif()
 endif()
 
-set(SHARED_SKIA_ROOT ${HOME_PATH}/programming/sources/libraries/skia)
-set(SHARED_SKIA_HEADERS ${SHARED_SKIA_ROOT}/headers)
+# THE PREBUILT EXTERNALS -- Skia and friends. They live OUTSIDE any checkout, in
+# programming/sources/libraries, so every path to an archive or a Skia header
+# goes through this one variable rather than through CPPNEW_ROOT (which is the
+# source tree) or through a hand-rolled iPlug2 Dependencies path. Override with
+# -DTSL_LIBS_ROOT=... to build against a different set.
+if(NOT DEFINED TSL_LIBS_ROOT)
+    set(TSL_LIBS_ROOT "${HOME_PATH}/programming/sources/libraries")
+endif()
 
 if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
     message("TSL Windows ${CMAKE_BUILD_TYPE} Build")
@@ -52,7 +64,7 @@ endif()
 
 # NEW - USE THIS:
 if(NOT TARGET common_interface)
-    add_subdirectory(${GRAINSTORM_OLD_ROOT}/common_interface
+    add_subdirectory(${CPPNEW_ROOT}/common_interface
                      ${CMAKE_BINARY_DIR}/common_interface)
 endif()
 
@@ -195,7 +207,7 @@ if (IS_GRAINSTORM)
 endif ()
 
 if (LICENSE_CHECK_ENABLED)
-    add_subdirectory(${GRAINSTORM_OLD_ROOT}/licensecheck LCHECK)
+    add_subdirectory(${CPPNEW_ROOT}/licensecheck LCHECK)
     set(CUSTOM_LIBS ${CUSTOM_LIBS} licensecheck)
     set(SOURCE_FILES ${SOURCE_FILES}
             ${SRC_PATH}/lc.cpp
@@ -212,7 +224,7 @@ if (HAS_GUI)
     if (${CMAKE_SYSTEM_NAME} STREQUAL "Android")
         add_library(skia STATIC IMPORTED)
         add_library(freetype STATIC IMPORTED)
-        set(SKIA_PATH ${SHARED_SKIA_ROOT}/android)
+        set(SKIA_PATH ${TSL_LIBS_ROOT}/skia/android)
         set_target_properties(freetype PROPERTIES IMPORTED_LOCATION ${SKIA_PATH}/out/${ANDROID_ABI}/libfreetype2.a)
         set_target_properties(skia PROPERTIES IMPORTED_LOCATION ${SKIA_PATH}/out/${ANDROID_ABI}/libskia.a)
         set(CUSTOM_LIBS ${CUSTOM_LIBS} GLESv3 EGL skia)
@@ -234,22 +246,70 @@ if (HAS_GUI)
         )
     elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
         file(GLOB SOURCE_FILES ${SOURCE_FILES} glad2.c)
-        set(SKIA_PATH ${HOME_PATH}/programming/sources/skia)
-        set_target_properties(skia PROPERTIES IMPORTED_LOCATION ${SKIA_PATH}/out/Linux/libskia.a)
-        set(CUSTOM_LIBS ${CUSTOM_LIBS} GL)
-        set(SKIA_INCLUDES_PATH ${HOME_PATH}/programming/sources/skia)
+        # THE IMPORTED TARGET HAS TO BE DECLARED HERE. Every other branch of this
+        # block calls add_library(skia STATIC IMPORTED) itself; this one only
+        # set the property, so configuring for Linux failed outright with "Can
+        # not find target to add properties to: skia" -- the branch had never
+        # been run since the Android branch above stopped declaring it for
+        # everyone.
+        add_library(skia STATIC IMPORTED)
+        # sources/libraries is this machine's own Skia, built by iPlug2's
+        # Dependencies/IGraphics/build-skia-linux.sh from the same feature set as
+        # the libraries Windows and macOS ship, and installed here by
+        # install-skia-linux.sh. See sources/libraries/README.md.
+        set(SKIA_PATH ${TSL_LIBS_ROOT}/skia/linux-x64)
+        # Pulled at configure when missing -- the same end-to-end recipe a hand
+        # build runs (libraries/get-skia-linux.sh). First time is a real Skia
+        # build, ~15 min; after that this never fires.
+        if (NOT EXISTS "${SKIA_PATH}/lib/libskia.a")
+            message(STATUS "tslgraphics: no Linux Skia at ${SKIA_PATH} -- pulling "
+                           "(first time this BUILDS Skia, ~15 min)")
+            execute_process(COMMAND "${TSL_LIBS_ROOT}/get-skia-linux.sh" x64
+                            RESULT_VARIABLE _tslg_skia_pull)
+            if (NOT _tslg_skia_pull EQUAL 0 OR NOT EXISTS "${SKIA_PATH}/lib/libskia.a")
+                message(FATAL_ERROR "tslgraphics: Skia pull failed -- see ${TSL_LIBS_ROOT}/README.md")
+            endif ()
+        endif ()
+        set_target_properties(skia PROPERTIES IMPORTED_LOCATION ${SKIA_PATH}/lib/libskia.a)
+        # fontconfig, because that is how Skia answers "give me a face" on this
+        # platform and it is the SYSTEM's -- everything else the archive needs
+        # (freetype, libpng, expat) is folded into libskia.a by is_official_build.
+        set(CUSTOM_LIBS ${CUSTOM_LIBS} skia GL fontconfig)
+        # The headers that MATCH that archive: a header from one Skia tree and an
+        # archive from another link with a signature nobody wrote. In this layout
+        # every non-Android platform shares the one header tree beside them.
+        set(SKIA_INCLUDES_PATH ${TSL_LIBS_ROOT}/skia/headers)
+        set(SKIA_INCLUDES
+                ${SKIA_INCLUDES_PATH}
+                ${SKIA_INCLUDES_PATH}/include/core
+                ${SKIA_INCLUDES_PATH}/include/gpu
+                ${SKIA_INCLUDES_PATH}/include/gpu/ganesh
+                ${SKIA_INCLUDES_PATH}/include/gpu/ganesh/gl
+                ${SKIA_INCLUDES_PATH}/include/config
+                ${SKIA_INCLUDES_PATH}/include/gpu/gl
+                ${SKIA_INCLUDES_PATH}/src/gpu/gl
+                ${SKIA_INCLUDES_PATH}/include/utils
+                ${SKIA_INCLUDES_PATH}/include/effects)
     elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-        set(GLAD_INCLUDES_PATH ${CMAKE_CURRENT_SOURCE_DIR} ${HOME_PATH}/programming/sources/libraries/glad_GL3/include)
+        set(GLAD_INCLUDES_PATH ${CMAKE_CURRENT_SOURCE_DIR} ${TSL_LIBS_ROOT}/glad_GL3/include)
         set(PUBLIC_INCLUDE_DIRS ${PUBLIC_INCLUDE_DIRS} ${GLAD_INCLUDES_PATH})
-         set(SKIA_INCLUDES_PATH ${SHARED_SKIA_HEADERS})
         add_library(skia STATIC IMPORTED)
 
-        # IMPORTANT: Change from win-md to win-mt for static runtime
-        set_target_properties(skia PROPERTIES IMPORTED_LOCATION ${SHARED_SKIA_ROOT}/win-x64/lib/skia.lib)
-        add_library(libpng STATIC IMPORTED)
-        set_target_properties(libpng PROPERTIES IMPORTED_LOCATION ${SHARED_SKIA_ROOT}/win-x64/lib/libpng.lib)
+        if (CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|aarch64")
+            set(SKIA_INCLUDES_PATH ${TSL_LIBS_ROOT}/skia/headers)
+            set_target_properties(skia PROPERTIES IMPORTED_LOCATION
+                ${TSL_LIBS_ROOT}/skia/win-arm64/lib/skia.lib)
+            set(CUSTOM_LIBS ${CUSTOM_LIBS} OpenGL32 skia)
+        else()
+            set(SKIA_INCLUDES_PATH ${TSL_LIBS_ROOT}/skia/headers)
+            set_target_properties(skia PROPERTIES IMPORTED_LOCATION
+                ${TSL_LIBS_ROOT}/skia/win-x64/lib/skia.lib)
+            add_library(libpng STATIC IMPORTED)
+            set_target_properties(libpng PROPERTIES IMPORTED_LOCATION
+                ${TSL_LIBS_ROOT}/skia/win-x64/lib/libpng.lib)
+            set(CUSTOM_LIBS ${CUSTOM_LIBS} OpenGL32 skia libpng)
+        endif()
 
-        set(CUSTOM_LIBS ${CUSTOM_LIBS} OpenGL32 skia libpng)
         set(SKIA_INCLUDES
                 ${SKIA_INCLUDES_PATH}
                 ${SKIA_INCLUDES_PATH}/include/core
@@ -264,16 +324,19 @@ if (HAS_GUI)
                 ${SKIA_INCLUDES_PATH}/include/effects)
     elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" OR ${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
 
-        set(SKIA_INCLUDES_PATH ${SHARED_SKIA_HEADERS})
+
+
+
+        set(SKIA_INCLUDES_PATH ${TSL_LIBS_ROOT}/skia/headers)
         add_library(skia STATIC IMPORTED)
         set_target_properties(skia PROPERTIES IMPORTED_LOCATION
-                ${SHARED_SKIA_ROOT}/mac/lib/libskia.a)
+                ${TSL_LIBS_ROOT}/skia/mac/lib/libskia.a)
         add_library(freetype STATIC IMPORTED)
         set_target_properties(freetype PROPERTIES IMPORTED_LOCATION
-                ${SHARED_SKIA_ROOT}/mac/lib/libfreetype.a)
+                ${TSL_LIBS_ROOT}/skia/mac/lib/libfreetype.a)
         set(CUSTOM_LIBS ${CUSTOM_LIBS} skia freetype)
         set(SKIA_INCLUDES
-                ${SHARED_SKIA_ROOT}/mac/include/freetype2
+                ${TSL_LIBS_ROOT}/skia/mac/include/freetype2
                 ${SKIA_INCLUDES_PATH}
                 ${SKIA_INCLUDES_PATH}/include/core
                 ${SKIA_INCLUDES_PATH}/include/gpu
@@ -309,6 +372,7 @@ if (HAS_GUI)
             ${SRC_PATH}/LogView.cpp
             ${SRC_PATH}/keydefines.cpp
             ${SRC_PATH}/SettingsView.cpp
+            ${SRC_PATH}/settings2.cpp
             ${SRC_PATH}/DynamicDialog.cpp
             ${SRC_PATH}/AnimatedSpinner.cpp
             ${SRC_PATH}/BackView.cpp
@@ -342,6 +406,7 @@ if (HAS_GUI)
             ${PUBLIC_INCLUDES}/LogView.h
             ${PUBLIC_INCLUDES}/keydefines.h
             ${PUBLIC_INCLUDES}/SettingsView.h
+            ${PUBLIC_INCLUDES}/settings2.h
             ${PUBLIC_INCLUDES}/DynamicDialog.h
             ${PUBLIC_INCLUDES}/AnimatedSpinner.h
             ${PUBLIC_INCLUDES}/BackView.h
@@ -380,7 +445,7 @@ if (HAS_GUI)
     list(APPEND PUBLIC_INCLUDE_DIRS ${SKIA_INCLUDES})
 
     if (USE_IMGUI)
-        set(IMGUI_LOCATION ${GRAINSTORM_OLD_ROOT}/imgui)
+        set(IMGUI_LOCATION ${CPPNEW_ROOT}/imgui)
 
         set(SOURCE_FILES ${SOURCE_FILES}
                 ${SRC_PATH}/imguitsl.cpp
@@ -412,7 +477,7 @@ if (HAS_AUDIO)
         set(CUSTOM_LIBS ${CUSTOM_LIBS} oboe::oboe)
     endif ()
     # 1. Include the zstd subdirectory 
-#    add_subdirectory(${GRAINSTORM_OLD_ROOT}/zstd ZSTD)
+#    add_subdirectory(${CPPNEW_ROOT}/zstd ZSTD)
 #    set(CUSTOM_LIBS ${CUSTOM_LIBS} zstd_static)
 #    target_include_directories(zstd_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 endif ()
@@ -423,12 +488,12 @@ if (FILE_SUPPORT)
     set(HEADER_FILES ${HEADER_FILES}
             ${PUBLIC_INCLUDES}/FileWrapper.h)
 
-    set(FLAC_PATH ${GRAINSTORM_OLD_ROOT}/flac)
-set(LAME_PATH ${GRAINSTORM_OLD_ROOT}/lame)
+    set(FLAC_PATH ${CPPNEW_ROOT}/flac)
+set(LAME_PATH ${CPPNEW_ROOT}/lame)
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 
-add_subdirectory(${GRAINSTORM_OLD_ROOT}/flac ${CMAKE_BINARY_DIR}/flac)
+add_subdirectory(${CPPNEW_ROOT}/flac ${CMAKE_BINARY_DIR}/flac)
 
 
     add_library(mp3lame STATIC IMPORTED)
@@ -442,7 +507,7 @@ else()
     list(APPEND PUBLIC_INCLUDE_DIRS
         ${LAME_PATH}/include
     )
-    add_subdirectory(${GRAINSTORM_OLD_ROOT}/flac-mini FLAC)
+    add_subdirectory(${CPPNEW_ROOT}/flac-mini FLAC)
     list(APPEND PUBLIC_INCLUDE_DIRS
         ${FLAC_PATH}/include
     )

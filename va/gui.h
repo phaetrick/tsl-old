@@ -10,6 +10,16 @@ void callbackFXSwitch(tsl::AppState* _appState, int id, int space);
 namespace tsl { namespace app {
     void guiSetup(tsl::AppState* _appState);
     void setup_main_window(tsl::AppState* _appState);
+    // Trial gate verdicts, mirrored from TrialGate.java.
+    enum : int { kTrialNone = 0, kTrialActive = 1, kTrialExpired = 2 };
+    // Java's answer, which can arrive before the UI exists, during the free
+    // session's countdown, or after its wall is already up.
+    void setTrialState(tsl::AppState* _appState, int state);
+    // The gate (Android; a no-op when dofastrender is set). Called at the end of
+    // setup_main_window so any wall lands above a freshly registered root. An
+    // active trial runs uncapped; an expired one is walled; anything else -- no
+    // token yet, server unreachable -- falls back to the 10-minute session.
+    void startSessionCap(tsl::AppState* _appState);
     // Where modulation can take `pid`, in the parameter's own value domain. Installed
     // as Knob::modRangeProvider so knobs can draw their mod range — see modrange.cpp.
     bool modRangeFor2(tsl::AppState* _appState, int pid, float& lo, float& hi);

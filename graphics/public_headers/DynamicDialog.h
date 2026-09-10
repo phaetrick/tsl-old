@@ -76,9 +76,12 @@ namespace tsl {
             enum class ButtonMode {
                 NO_BUTTONS = 0,     // No buttons
                 OK_ONLY = 1,        // Only OK button
-                CANCEL_ONLY = 2,    // Only Cancel button  
+                CANCEL_ONLY = 2,    // Only Cancel button
                 OK_CANCEL = 3,      // Both OK and Cancel buttons
-                CUSTOM_BUTTON = 4   // Custom button(s)
+                CUSTOM_BUTTON = 4,  // Custom button(s)
+                OK_CANCEL_CUSTOM = 5 // Custom (left) + Cancel + OK (right). Set via
+                                     // setCustomButton() THEN setButtonMode() - the
+                                     // former forces CUSTOM_BUTTON mode.
             };
             using OnCompleteCallback = std::function<void(const DialogResult&)>;
 
@@ -229,11 +232,6 @@ namespace tsl {
             std::vector<std::unique_ptr<InputField>> fields;
             AlphaKeyboard keyboard;
 
-            // Hardware auto-repeat state: the vkey currently held down, and
-            // whether its repeats already typed (then the release is silent).
-            int  hwHeldVkey_{ -1 };
-            bool hwRepeated_{ false };
-
             // State
             int currentFieldIndex{ 0 };
             bool hasButtons{ true };
@@ -246,7 +244,9 @@ namespace tsl {
             // Internal methods
             void layoutFields();
             void setFieldFocus(int fieldIndex);
-            void handleConfirmCancel(int vkey);
+            // shiftTab: Tab navigates backwards (from the key event's own
+            // modifier snapshot — there is no global shift state anymore)
+            void handleConfirmCancel(int vkey, bool shiftTab = false);
             void handleTap(const InputEvent& e);
             void nextField();
             void prevField();

@@ -21,19 +21,30 @@ public class MidiPortWrapper {
         mPortIndex = portIndex;
     }
 
+    /**
+     * The device's name on its own, without the id and port decoration toString()
+     * adds -- what you want when naming the connection inside a sentence.
+     *
+     * @return the name, or null for the empty placeholder wrapper
+     */
+    String getDeviceName() {
+        if (mInfo == null) {
+            return null;
+        }
+        String name = mInfo.getProperties().getString(MidiDeviceInfo.PROPERTY_NAME);
+        if (name == null) {
+            name = mInfo.getProperties().getString(MidiDeviceInfo.PROPERTY_MANUFACTURER)
+                    + ", " + mInfo.getProperties().getString(MidiDeviceInfo.PROPERTY_PRODUCT);
+        }
+        return name;
+    }
+
     private void updateString() {
         if (mInfo == null) {
             mString = "- - - - - -";
         } else {
             StringBuilder sb = new StringBuilder();
-            String name = mInfo.getProperties()
-                    .getString(MidiDeviceInfo.PROPERTY_NAME);
-            if (name == null) {
-                name = mInfo.getProperties()
-                        .getString(MidiDeviceInfo.PROPERTY_MANUFACTURER) + ", "
-                        + mInfo.getProperties()
-                        .getString(MidiDeviceInfo.PROPERTY_PRODUCT);
-            }
+            String name = getDeviceName();
             sb.append("#" + mInfo.getId());
             sb.append(", ").append(name);
             PortInfo portInfo = findPortInfo();

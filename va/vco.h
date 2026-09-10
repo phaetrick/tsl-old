@@ -161,6 +161,12 @@ struct WavetableSet {
 // it asked with the display's own key, which is why the picture could disagree with
 // the sound. Now there is one selection, made in one place, and the display is told.
 static constexpr int WT_DISPLAY_OSCS = 3;
+// The mailboxes carry twice that: slots [0, WT_DISPLAY_OSCS) are the WT display per
+// oscillator, slots [WT_DISPLAY_OSCS, VA_DISPLAY_SLOTS) the PAD display per
+// oscillator. Separate slots rather than shared ones because an oscillator's WT and
+// PAD pages are both built and both remember their last picture — one slot per
+// (osc, page) is what lets each page keep its own.
+static constexpr int VA_DISPLAY_SLOTS = WT_DISPLAY_OSCS * 2;
 
 // Audio thread. Cheap no-op unless the key moved since the last successful publish;
 // on a move it looks up the ready set and publishes its frames. Retries every block
@@ -294,6 +300,12 @@ struct PadRegion {
 struct PadSet {
     PadRegion region[PAD_REGIONS];
     PadParams params;
+    // The stack view, same block type and conventions as WavetableSet::display:
+    // SLICES windows walking the baked mA→mB span front to back, each peak-
+    // normalised. Extracted ONCE at build time on the worker (from the middle-C
+    // region, two fundamental periods per slice, levels lerped exactly as padPrep
+    // does at runtime), so the render thread never touches the 16.75 MB tables.
+    std::shared_ptr<const WtDisplayFrames> display;
 };
 
 // Region index for a playing frequency. Latched at note-on — see the header note.
@@ -349,6 +361,11 @@ void padSnapParams(PadParams& p);
 // Ask for an off-thread build if this set isn't cached yet. Cheap and idempotent —
 // safe to call every block from the audio thread.
 void padWarmRequest(tsl::AppState* app, const PadParams& p, double sampleRate);
+
+// The PAD counterpart of wtPublishDisplay, publishing PadSet::display into mailbox
+// slot WT_DISPLAY_OSCS + osc. Same contract: audio thread, keyed on padKey so it is
+// a cheap no-op until the params move, retried every block while the set builds.
+void padPublishDisplay(int osc, const PadParams& p, double sampleRate);
 
 // Build lazily / fetch from cache. BLOCKING — worker threads only, never audio.
 std::shared_ptr<PadSet> getPadSet(const PadParams& p, double sampleRate);

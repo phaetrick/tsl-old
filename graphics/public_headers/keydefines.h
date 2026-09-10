@@ -211,6 +211,14 @@ namespace tsl {
 		// auto-repeat when held - modifiers, Return, Escape etc. never do.
 		bool VKeyTypesCharacter(int vk);
 
+		// True when a hardware key event edits text: it types (via the OS-
+		// translated keychar or the vkey table), deletes, or moves the caret.
+		// These commit on KEY_DOWN — every DOWN including OS auto-repeats acts,
+		// which is what makes held keys repeat. Return/Escape/Tab are excluded:
+		// they confirm/cancel/navigate on KEY_UP so a popup closed by a press
+		// never leaks its release into the view behind it.
+		bool KeyEventEdits(int vk, char keychar);
+
 		extern KeyboardCode KeyCodeToVkey(int32_t key_code);
 	}
 }

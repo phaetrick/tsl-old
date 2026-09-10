@@ -289,6 +289,9 @@ namespace tsl {
         private:
             float lastx{}, lasty{};
             int32_t _pointerid{};
+            // Double-tap-to-jump timing: seconds between consecutive releases
+            // (same idiom as Knob / Slider, see knob.cpp).
+            tsl::time timer{};
         };
 
         class PianoView : public VerticalLayout, public PianoBase {

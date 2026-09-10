@@ -76,13 +76,9 @@
     <PreferenceCategory android:title="MIDI">
         <Preference
             android:title="@string/midisender"
-            android:summary="Which connected MIDI device plays the synth."
+            android:summary="Select the physical controller that sends MIDI to the synth."
             android:key="@string/midisender"/>
-        <CheckBoxPreference
-            android:title="Ignore Second MIDI Note On Event"
-            android:key="@string/ignoresecondnoteonevent"
-            android:defaultValue="false"
-            android:summary="For controllers that send every Note On twice."/>
+
 </PreferenceCategory>
 </PreferenceScreen>
 <PreferenceScreen
@@ -106,8 +102,8 @@
      .onTaskRemoved) - with it, playback keeps running and the notification
      carries the Stop button. -->
 <CheckBoxPreference
-	android:title="Show Notification When Backgrounded"
-	android:summary="Keeps a notification with a Stop button while the synth plays in the background. Without it, swiping the app away stops the sound."
+	android:title="Show Notification When Synth Is Playing"
+	android:summary="Shows a notification with a Stop button while the synth is powered on. Without it, swiping the app away stops the engine."
 	android:key="@string/runAsForeGround"
 	android:defaultValue="false"/>
 
@@ -116,7 +112,6 @@
 </PreferenceCategory>
 <PreferenceCategory android:title="Misc" android:key="misc">
 <Preference android:title="Upgrade"
-	android:summary="One payment, no subscription."
 	android:key="@string/upgrade"/>
 <Preference android:title="Instructions" android:key="@string/instructions"/>
 <Preference android:title="Changelog"

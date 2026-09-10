@@ -918,6 +918,10 @@ namespace tsl {
             MW_TO_FILT, MW_TO_VIBRATO, MW_TO_RES, MW_TO_LFORATE, MW_TO_LFODEPTH,
             MW_TO_MORPH, MW_TO_WARP, MW_TO_UNI, MW_TO_DECAY,
             KEYTRACK_TO_FILT, KEYTRACK_TO_DECAY,
+            // ── LFO3 / LFO4 ──  claimed from the reserve block 2026-08-18; same
+            // layout as LFO1/2 above.
+            LFO3RATE, LFO3DEPTH, LFO3PHASE, LFO3WAVE, LFO3DEST,
+            LFO4RATE, LFO4DEPTH, LFO4PHASE, LFO4WAVE, LFO4DEST,
             // ── reserved for future params ──  claim from the top; never insert
             // above, never reorder.
             {PARAM_NOT_ASSIGNED},
@@ -934,16 +938,21 @@ namespace tsl {
             {PARAM_NOT_ASSIGNED},
             {PARAM_NOT_ASSIGNED},
             {PARAM_NOT_ASSIGNED},
-            {PARAM_NOT_ASSIGNED},
-            {PARAM_NOT_ASSIGNED},
-            {PARAM_NOT_ASSIGNED},
-            {PARAM_NOT_ASSIGNED},
-            {PARAM_NOT_ASSIGNED},
-            {PARAM_NOT_ASSIGNED},
-            {PARAM_NOT_ASSIGNED},
-            {PARAM_NOT_ASSIGNED},
-            {PARAM_NOT_ASSIGNED},
-            {PARAM_NOT_ASSIGNED},
+            // ── LFO multi-dest matrix ──  4 LFOs x 21 dests, appended AFTER the
+            // remaining reserves so future claims keep their indices. Host names
+            // come from the per-dest param names ("PITCH".."NOISE", category LFOn).
+            LFO_MD_FIRST +  0, LFO_MD_FIRST +  1, LFO_MD_FIRST +  2, LFO_MD_FIRST +  3, LFO_MD_FIRST +  4, LFO_MD_FIRST +  5, LFO_MD_FIRST +  6,
+            LFO_MD_FIRST +  7, LFO_MD_FIRST +  8, LFO_MD_FIRST +  9, LFO_MD_FIRST + 10, LFO_MD_FIRST + 11, LFO_MD_FIRST + 12, LFO_MD_FIRST + 13,
+            LFO_MD_FIRST + 14, LFO_MD_FIRST + 15, LFO_MD_FIRST + 16, LFO_MD_FIRST + 17, LFO_MD_FIRST + 18, LFO_MD_FIRST + 19, LFO_MD_FIRST + 20,
+            LFO_MD_FIRST + 21, LFO_MD_FIRST + 22, LFO_MD_FIRST + 23, LFO_MD_FIRST + 24, LFO_MD_FIRST + 25, LFO_MD_FIRST + 26, LFO_MD_FIRST + 27,
+            LFO_MD_FIRST + 28, LFO_MD_FIRST + 29, LFO_MD_FIRST + 30, LFO_MD_FIRST + 31, LFO_MD_FIRST + 32, LFO_MD_FIRST + 33, LFO_MD_FIRST + 34,
+            LFO_MD_FIRST + 35, LFO_MD_FIRST + 36, LFO_MD_FIRST + 37, LFO_MD_FIRST + 38, LFO_MD_FIRST + 39, LFO_MD_FIRST + 40, LFO_MD_FIRST + 41,
+            LFO_MD_FIRST + 42, LFO_MD_FIRST + 43, LFO_MD_FIRST + 44, LFO_MD_FIRST + 45, LFO_MD_FIRST + 46, LFO_MD_FIRST + 47, LFO_MD_FIRST + 48,
+            LFO_MD_FIRST + 49, LFO_MD_FIRST + 50, LFO_MD_FIRST + 51, LFO_MD_FIRST + 52, LFO_MD_FIRST + 53, LFO_MD_FIRST + 54, LFO_MD_FIRST + 55,
+            LFO_MD_FIRST + 56, LFO_MD_FIRST + 57, LFO_MD_FIRST + 58, LFO_MD_FIRST + 59, LFO_MD_FIRST + 60, LFO_MD_FIRST + 61, LFO_MD_FIRST + 62,
+            LFO_MD_FIRST + 63, LFO_MD_FIRST + 64, LFO_MD_FIRST + 65, LFO_MD_FIRST + 66, LFO_MD_FIRST + 67, LFO_MD_FIRST + 68, LFO_MD_FIRST + 69,
+            LFO_MD_FIRST + 70, LFO_MD_FIRST + 71, LFO_MD_FIRST + 72, LFO_MD_FIRST + 73, LFO_MD_FIRST + 74, LFO_MD_FIRST + 75, LFO_MD_FIRST + 76,
+            LFO_MD_FIRST + 77, LFO_MD_FIRST + 78, LFO_MD_FIRST + 79, LFO_MD_FIRST + 80, LFO_MD_FIRST + 81, LFO_MD_FIRST + 82, LFO_MD_FIRST + 83,
         };
 #elif defined(GENERATIVE)
         // Nothing exposed to the host yet. One reserved slot keeps dp[] a valid

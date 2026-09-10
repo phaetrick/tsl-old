@@ -72,6 +72,18 @@ void tsl::app::resize(tsl::AppState *_appState, int w, int h) {
 #endif
     _STATE->rootwin->init();
     tsl::app::setup_main_window(_STATE);
+    /* Same reasoning as the Android surface-change path below, which has done
+       this for a while: rootwin->init() and setup_main_window() cover the ROOT
+       TREE ONLY. Views that own their own window -- Settings2, DynamicDialog,
+       the preset browser -- are not in it, and most are not perm either, so
+       they were reaped from queue_draw after their first frame and kept
+       compositing at the geometry they were opened with. A host resizing the
+       editor left every open panel stale until it was closed and reopened.
+       Runs after onResized(), so windowWidth/Height are already the new ones. */
+    for (auto* v : _STATE->graphics.windowOwners()) {
+        v->init();
+        v->redraw();
+    }
     _STATE->uiReady = true;
     _STATE->uiReady.notify_all();
 }
@@ -172,7 +184,7 @@ void tsl::app::loop(tsl::AppState* _appState, int w, int h) {
 
 
 
-#else if defined(__ANDROID__)
+#elif defined(__ANDROID__)
 
 #include "window_anim.h"
 #include "include/effects/SkGradientShader.h"
@@ -458,6 +470,15 @@ void tsl::app::drawThreadGL(struct android_app* app) {
                    exactly as it was -- gEglContext outlives gEglSurface, so
                    their render targets were never invalid. */
                 _STATE->graphics.dropFramebufferSurfaces(true);
+                /* Backgrounded: everything purgeable in the GrResourceCache --
+                   the root surface dropped just above, stencils, glyph
+                   atlases, image uploads -- would otherwise stay resident
+                   against LMK for as long as we are hidden. Popup surfaces are
+                   referenced, so they survive this; the rest rebuilds in one
+                   frame on resume. Has to run before the context is
+                   un-currented, the deletes need it. */
+                if (auto ctx = _STATE->graphics.getContext())
+                    ctx->freeGpuResources();
                 eglMakeCurrent(gEglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
                 eglDestroySurface(gEglDisplay, gEglSurface);
                 gEglSurface = EGL_NO_SURFACE;

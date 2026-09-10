@@ -6,6 +6,10 @@
 #include <IconsMaterialDesignReduced.h>
 #include "app.h"
 #include "tools/PlatformPaths.h"
+// Needed by the template body below, not just by the explicit instantiation at
+// the bottom: Preset::removePreset is a non-dependent name and is looked up
+// where the template is defined.
+#include "preset.h"
 
 namespace tsl::graphics {
 	template<typename T>
@@ -424,16 +428,23 @@ using namespace tsl::graphics;
 
 template<typename T>
 void tsl::app::deleteOverwriteFunc(tsl::AppState* _appState, tsl::QueueUnsafe<T, 100>& q, std::string title, std::function<std::vector<T>()> getItems, std::function<bool(tsl::AppState*, std::string&)> saver) {
+	// Seed ONCE, before the loop. This used to sit inside it, guarded by
+	// q.empty() -- which meant deleting the last preset emptied the queue and the
+	// next pass re-seeded from getItems(). That reads _DATA->presets, which is
+	// only rebuilt from disk after this function returns, so the preset that had
+	// just been deleted came straight back into the list. With one preset in the
+	// bank, deleting it appeared to do nothing at all.
+	{
+		std::lock_guard lk(q);
+		if (q.empty())
+			for (auto& p : getItems()) q.push(p);
+	}
+
 	while (true) {
 		std::vector<T> vals;
 		{
 			std::lock_guard lk(q);
-			if (q.empty()) {
-				vals = getItems();
-				for (auto& p : vals) q.push(p);
-			} else {
-				for (auto& pr : q) vals.push_back(pr);
-			}
+			for (auto& pr : q) vals.push_back(pr);
 		}
 
 		SavePresetView<T> tt(_appState);
@@ -484,9 +495,11 @@ void tsl::app::deleteOverwriteFunc(tsl::AppState* _appState, tsl::QueueUnsafe<T,
 				loginDialog.deldraw();
 				if (ack) {
 					if (!overwrite) {
-						std::error_code ec;
-						std::filesystem::remove(res.item->path, ec);
-						if (ec) showToast(_STATE, (std::string("Delete failed: ") + ec.message()).c_str());
+						// Not std::filesystem: on Android the path may be a
+						// content:// URI in the user's own preset folder, which
+						// has no filesystem entry to unlink.
+						if (!::Preset::removePreset(res.item->path))
+							showToast(_STATE, "Delete failed.");
 						else {
 							std::lock_guard lk(q);
 							for (auto& p : q) { if (p == res.item) { q.del(p); break; } }
@@ -510,16 +523,13 @@ void tsl::app::deleteOverwriteFunc(tsl::AppState* _appState, tsl::QueueUnsafe<T,
 			tt.delCB();
 			tt.deldraw();
 			if (saver(_appState, presetName) && itemToReplace != nullptr) {
-				std::error_code ec;
-				std::filesystem::remove(fileToRemove, ec);
-				if (!ec) {
+				if (::Preset::removePreset(fileToRemove)) {
 					std::lock_guard lk(q);
 					for (auto& p : q) { if (p == itemToReplace) { q.del(p); break; } }
 				} else {
-					// Keep the entry: its file is still on disk — dropping it here is
+					// Keep the entry: its file is still there — dropping it here is
 					// what let the stale item come back as a duplicate on rebuild.
-					auto s = std::string("Saved, but the replaced file could not be removed: ") + ec.message();
-					showToast(_STATE, s.c_str());
+					showToast(_STATE, "Saved, but the replaced preset could not be removed.");
 				}
 			}
 			break;
@@ -528,7 +538,6 @@ void tsl::app::deleteOverwriteFunc(tsl::AppState* _appState, tsl::QueueUnsafe<T,
 }
 
 // PA instantiation
-#include "preset.h"
 using PAPreset = std::shared_ptr<Preset::Preset>;
 template void tsl::app::deleteOverwriteFunc<PAPreset>(
 	tsl::AppState*,

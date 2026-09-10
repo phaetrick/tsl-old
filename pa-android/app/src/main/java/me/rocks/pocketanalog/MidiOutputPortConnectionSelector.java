@@ -39,31 +39,40 @@ public class MidiOutputPortConnectionSelector extends MidiPortSelector {
 
     @Override
     public void onPortSelected(final MidiPortWrapper wrapper) {
+        // onNothingSelected() sends null, and equals() below would throw on it. This
+        // is what the blanket catch was really covering for.
+        if (wrapper == null || wrapper.equals(mLastWrapper)) {
+            return;
+        }
         try {
-            if (!wrapper.equals(mLastWrapper)) {
-                try {
-                    if (mSynthConnector != null) {
-                        mSynthConnector.close();
-                        mSynthConnector = null;
-                    }
-                } catch (IOException e) {
-                    Log.e(MidiConstants.TAG, "Exception in closeSynthResources()", e);
-                }
-                onClose();
-                if (wrapper.getDeviceInfo() != null) {
-                    mSynthConnector = new MidiPortConnector(mMidiManager);
-                    mSynthConnector.connectToDevicePort(wrapper.getDeviceInfo(),
-                            wrapper.getPortIndex(), mDestinationDeviceInfo,
-                            mDestinationPortIndex,
-                            // not safe on UI thread
-                            mConnectedListener, null);
+            if (mSynthConnector != null) {
+                mSynthConnector.close();
+                mSynthConnector = null;
+            }
+        } catch (IOException e) {
+            Log.e(MidiConstants.TAG, "Exception in closeSynthResources()", e);
+        }
+        onClose();
+        if (wrapper.getDeviceInfo() != null) {
+            try {
+                mSynthConnector = new MidiPortConnector(mMidiManager);
+                mSynthConnector.connectToDevicePort(wrapper.getDeviceInfo(),
+                        wrapper.getPortIndex(), mDestinationDeviceInfo,
+                        mDestinationPortIndex,
+                        // not safe on UI thread
+                        mConnectedListener, null);
+            } catch (Exception e) {
+                // openDevice() throws for a bad destination. Swallowed, that read as a
+                // successful connection: no toast, no events, nothing to go on.
+                Log.e(MidiConstants.TAG, "could not connect " + wrapper
+                        + " to destination", e);
+                mSynthConnector = null;
+                if (mConnectedListener != null) {
+                    mConnectedListener.onPortsConnected(null);
                 }
             }
-            mLastWrapper = wrapper;
         }
-        catch(Exception e){
-            ;
-        }
+        mLastWrapper = wrapper;
     }
 
     @Override

@@ -1,6 +1,7 @@
 #ifndef GRAINSTORM_H
 #define GRAINSTORM_H
 
+#include "Chorus.h"
 #include <atomic>
 #include <vector>
 #include <thread>
@@ -54,6 +55,9 @@ struct DATA {
     ViewS views{};
     int panelheight{};
     std::atomic<bool> hqresampling{};
+    // Settings toggle: list the factory bank in the preset selector. Default is
+    // exempt — it always stays (see PresetSelector::addRecursiveDraw).
+    std::atomic<bool> showFactoryPresets{true};
     bool startPoweredOn{};
     uint32_t mask{};
     uint32_t lobits{};
@@ -79,6 +83,22 @@ struct DATA {
     int64_t presetDate{};
     ToAudioThreadQueue toAudioThreadQueue{};
     std::atomic<bool> integrity_failed{false};
+
+    // Free-session cap. capThread arms once per process (startSessionCap) and
+    // flips sessionExpired when the free session is over; the POWER/RECORD
+    // special actions read it so a MIDI-mapped control cannot restart audio
+    // behind the wall. AppState's destructor runs waitNotify.shutdown() before
+    // onDestroy_ deletes DATA, so the join below never blocks on a live wait.
+    std::atomic<bool> sessionExpired{false};
+    // Set with sessionExpired: synth.cpp swaps the postgain target for 0 so the
+    // output glides to silence (~150 ms) before the wall's player.stop() cuts
+    // the stream at a buffer boundary.
+    std::atomic<bool> sessionMute{false};
+    std::thread capThread;
+    ~DATA() {
+        if (capThread.joinable())
+            capThread.join();
+    }
 
     // sequencer state (was file-static in sequencer.cpp)
     int seq_currentnote{}, seq_stepforward{}, seq_arpstep{}, seq_oldarpcycles{},
@@ -109,10 +129,12 @@ struct DATA {
     MYFLOAT synth_smoothed{};
     // CDELPOW/REVPOW on-off crossfade (0=fully dry/bypassed, 1=fully wet), so
     // toggling doesn't hard-cut a live tail or slam a stale one back in.
-    MYFLOAT synth_delayFade{}, synth_reverbFade{};
+    MYFLOAT synth_delayFade{}, synth_reverbFade{}, synth_chorusFade{};
     bool synth_delayNeedsReset{}, synth_reverbNeedsReset{};
     tsl::AlignedVector<MYFLOAT> synth_dryl, synth_dryr;
     tsl::AlignedVector<MYFLOAT> synth_bufl, synth_bufr;
+    bool synth_chorusNeedsReset{false};
+    va::EnsembleChorus synth_chorus;
     // complex synth objects — class definitions live in synth.cpp, initialized lazily in synthFunc
     std::vector<MYFLOAT> coeffsUp, coeffsDown;
     std::unique_ptr<void, void(*)(void*)> synthQueue_obj{nullptr, [](void*){}};

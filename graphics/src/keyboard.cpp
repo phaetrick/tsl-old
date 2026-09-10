@@ -71,6 +71,15 @@ bool tsl::graphics::VKeyTypesCharacter(int vk) {
 	return VKtoChar(vk, false) != '\0' || VKtoChar(vk, true) != '\0';
 }
 
+// Hardware key events that edit text commit on KEY_DOWN (see keydefines.h).
+// Return/Escape/Tab are confirm/cancel/navigate keys and never edit.
+bool tsl::graphics::KeyEventEdits(int vk, char keychar) {
+	if (vk == VKEY_RETURN || vk == VKEY_ESCAPE || vk == VKEY_TAB) return false;
+	if (keychar != '\0') return true;
+	if (vk == VKEY_LEFT || vk == VKEY_RIGHT || vk == VKEY_HOME || vk == VKEY_END) return true;
+	return VKeyTypesCharacter(vk);
+}
+
 
 void TextInput::render(void* ctx) {
 	auto c = (SkCanvas*)ctx;
@@ -87,21 +96,26 @@ void TextInput::render(void* ctx) {
 
 	// Choose alignment method
 	const float w1 = font.measureText(s.c_str(), (int)s.size(), SkTextEncoding::kUTF8);
-
+	const float viewW = width - 2 * padding; // matches the clipRect below
 
 	float x1 = 0.f;
 
-	if (textAlign == ALIGN_LEFT) {
-		if (w1 > width - 2 * padding)
-			x1 = width - w1 - 2 * padding;
-		// Left-aligned: text starts at left edge with small padding
-		else x1 = padding;
+	if (w1 <= viewW) {
+		scrollX = 0.f;
+		x1 = (textAlign == ALIGN_LEFT) ? padding : (width - w1) * 0.5f;
 	}
-	else
-	{
-		if (w1 > width - padding)
-			x1 = width - w1 - padding;
-		else x1 = (width - w1) * 0.5f; // Center-aligned: text centered in the box	
+	else {
+		// Overflowing text used to pin to its tail, so the caret could walk
+		// left out of the clip and the hidden head stayed hidden. Instead the
+		// viewport scrolls to follow the caret: stepping across an edge shifts
+		// the view by exactly the character that crossed it.
+		size_t cur = cursor; if (cur > s.size()) cur = s.size();
+		const float caretW = font.measureText(s.substr(0, cur).c_str(), (int)cur, SkTextEncoding::kUTF8);
+		if (scrollX > w1 - viewW) scrollX = w1 - viewW; // text shrank (deletes)
+		if (scrollX < 0.f) scrollX = 0.f;
+		if (caretW < scrollX) scrollX = caretW;                      // caret left of view
+		else if (caretW > scrollX + viewW) scrollX = caretW - viewW; // caret right of view
+		x1 = padding - scrollX;
 	}
 
 	if (highlight && !s.empty()) {
@@ -185,8 +199,12 @@ void TextInput::callback(const InputEvent& e) {
 		if (e.pointer_id == VKEY_BACK) { clearIfHighlighted(); if (cursor > 0) { text.del((int)cursor - 1); cursor--; } resetTimer(); return; }
 		if (e.pointer_id == VKEY_DELETE) { clearIfHighlighted(); if (cursor < text().size()) { text.del((int)cursor); } resetTimer(); return; }
 
-		// Numeric handling (unchanged)
-		if (numeric) {
+		// Numeric handling — the VK-position shortcuts apply only to events
+		// without an OS-translated character (i.e. on-screen keys): on
+		// hardware, the same physical position can mean something else on a
+		// non-US layout (German ß sits on VKEY_OEM_MINUS). Hardware '-'/'.'
+		// resolve through keychar into the ch-branches below.
+		if (numeric && e.keychar == '\0') {
 			if (e.pointer_id == VKEY_OEM_MINUS) {
 				clearIfHighlighted();
 				if (text.empty()) { text = "-"; cursor = 1; }
@@ -210,9 +228,22 @@ void TextInput::callback(const InputEvent& e) {
 			}
 		}
 
-		// Generic character mapping - FIXED to use the updated function
-		char ch = VKtoCharExtended_US(e.pointer_id, _STATE->shiftPressed);
-		if (ch == '\0') ch = VKtoChar(e.pointer_id, _STATE->shiftPressed);
+		// Character resolution. The OS-translated keychar (layout-aware, set
+		// for hardware key events) wins; on-screen keys resolve through the
+		// US tables. MOD_SHIFT arrives pre-folded by the popup — the event's
+		// own modifier snapshot plus the on-screen caps latch — so there is
+		// exactly one shift input and no global state.
+		const bool shifted = (e.mods & MOD_SHIFT) != 0;
+		char ch;
+		if (e.keychar != '\0') {
+			ch = e.keychar;
+			// On-screen caps latch uppercases hardware letters too
+			if (shifted && ch >= 'a' && ch <= 'z') ch = (char)(ch - 'a' + 'A');
+		}
+		else {
+			ch = VKtoCharExtended_US(e.pointer_id, shifted);
+			if (ch == '\0') ch = VKtoChar(e.pointer_id, shifted);
+		}
 
 		if (numeric) {
 			if (ch == '-') {
@@ -265,12 +296,10 @@ void TextInput::callback(const InputEvent& e) {
 		const float padding = fs * 0.5f;
 		auto wt = getTextWidth();
 		float textStartX;
-		if (textAlign == ALIGN_LEFT) {
-			textStartX = (wt > width - padding * 2) ? width - wt - padding * 2 : padding;
-		}
-		else {
-			textStartX = (wt > width - padding) ? width - wt - padding : (width - wt) * .5f;
-		}
+		if (wt > width - 2 * padding)
+			textStartX = padding - scrollX; // scrolled viewport — must match render()
+		else
+			textStartX = (textAlign == ALIGN_LEFT) ? padding : (width - wt) * .5f;
 
 		const float localX = e.x - startx;
 		size_t n = s.size(), i = 0;
@@ -374,19 +403,30 @@ void TextInputPopUp::init() {
 }
 
 void TextInputPopUp::callback(const InputEvent& e) {
+	// Hardware edits commit on KEY_DOWN with that event's own modifier
+	// snapshot (OS auto-repeats each act, so held keys repeat); Return and
+	// Escape confirm/cancel on KEY_UP so a press that closes the popup never
+	// leaks its release into whatever gets focus next.
+	if (e.action == ACTION_KEY_DOWN) {
+		if (KeyEventEdits(e.pointer_id, e.keychar)) {
+			InputEvent e2 = e;
+			e2.action = ACTION_KEY_UP;
+			e2.mods = FoldHwShift(e.mods, false);
+			textInput1.callback(e2);
+		}
+		return;
+	}
 	if (e.action == ACTION_KEY_UP) {
 		if (e.pointer_id == VKEY_RETURN && !isInside(e.x, e.y, x, y, w, h)) {
 			if (onEnter() == 1) { wakeWaiter(); }
 			return;
 		}
-		else if (e.pointer_id == VKEY_ESCAPE) {
+		if (e.pointer_id == VKEY_ESCAPE) {
 			wakeWaiter();
 		}
-		else {
-			textInput1.callback(e);
-		}
+		return; // typing already happened on KEY_DOWN
 	}
-	else if (e.action == ACTION_DOWN) {
+	if (e.action == ACTION_DOWN) {
 		if (e.x < x || e.x > x + w || e.y < y || e.y > y + h) {
 			wakeWaiter();
 		}
@@ -561,10 +601,18 @@ void NumericalPopUp::callback(const InputEvent& e) {
 		return;
 	}
 
-	// 2) Hardware keys
+	// 2) Hardware keys: edits on KEY_DOWN, confirm/cancel on KEY_UP
+	if (e.action == ACTION_KEY_DOWN) {
+		if (KeyEventEdits(e.pointer_id, e.keychar)) {
+			InputEvent e2 = e;
+			e2.action = ACTION_KEY_UP;
+			e2.mods = FoldHwShift(e.mods, false);
+			textInput1.callback(e2);
+		}
+		return;
+	}
 	if (e.action == ACTION_KEY_UP) {
-		if (handleConfirmCancelFromKeyboard(e.pointer_id)) return;
-		textInput1.callback(e);
+		handleConfirmCancelFromKeyboard(e.pointer_id);
 		return;
 	}
 
@@ -835,21 +883,18 @@ void AlphaKeyboard::layoutKeys() {
 	needsFullClear.store(true);
 }
 
-void AlphaKeyboard::syncGlobalShiftFlag() {
-	_STATE->shiftPressed = (shiftPressed.load() || capsLock.load());
-}
-
+// The latch is keyboard-internal state: it previews the shifted key set and
+// rides along on injected on-screen events (e2.mods). There is no global
+// shift flag anymore — hardware characters use their event's own snapshot.
 void AlphaKeyboard::toggleShift(bool onOff) {
 	shiftPressed.store(onOff);
-	syncGlobalShiftFlag();
-	markAllDirty();      // NEW
+	markAllDirty();
 	redraw();
 }
 
 void AlphaKeyboard::toggleCaps() {
 	capsLock.store(!capsLock.load());
-	syncGlobalShiftFlag();
-	markAllDirty();      // NEW
+	markAllDirty();
 	redraw();
 }
 
@@ -1155,8 +1200,12 @@ void AlphaKeyboard::setHardwareKeyHighlight(int vkey, bool down) {
 // =============================================================
 
 
+// Hardware Alt routes as Shift: the layouts have no Alt layer, and Windows-layout
+// typists reach '@' etc. through Alt(Gr)+digit — either modifier selects the
+// shifted character set.
 static inline bool isShiftKey(int vk) {
-	return vk == VKEY_SHIFT || vk == VKEY_LSHIFT || vk == VKEY_RSHIFT;
+	return vk == VKEY_SHIFT || vk == VKEY_LSHIFT || vk == VKEY_RSHIFT
+		|| vk == VKEY_MENU || vk == VKEY_LMENU || vk == VKEY_RMENU;
 }
 
 AlphaPopUp::AlphaPopUp(tsl::AppState* appState)
@@ -1185,39 +1234,61 @@ void AlphaPopUp::init() {
 	}
 	keyboard.init();
 
+	// Two rules, because the keyboard sits in a different place in each
+	// orientation and the right answer differs with it. Portrait: the box has one
+	// home whether or not a list is under it, so it does not jump between an
+	// empty bank and a bank of one and matches the dialogs that never have a list
+	// (rename, saveMidimapping). Landscape: the keyboard is on the right, the
+	// left column has the full height, and box-plus-list centred as one group is
+	// what reads best there -- and is what was checked on a device.
+	//
+	// It used to be laid out the other way round -- box first, then the list given
+	// every remaining pixel to the bottom edge, with ScrollListView::init centring
+	// its rows inside that. One preset therefore drew one row halfway down the
+	// screen, far below the box, and the gap GREW as the list got shorter. Giving
+	// the list exactly the height it asks for makes that internal centring a no-op.
+	const float ts = _STATE->textsize2;
+	const float margin = ts;
+	const float gap = ts;
+	// Same expression TextInputPopUp::init uses for h; needed before it runs.
+	const float boxH = ts * (title.empty() ? 3.0f : 5.0f);
+	const float bottom = portrait ? (float)keyboard.starty : (float)_STATE->windowHeight;
+
+	float top = (bottom - boxH) * .5f;
+	float childH = 0.f;
 	if (childView_ != nullptr) {
-		const auto tmpH = _STATE->textsize2 * (title.empty() ? 3.0 : 5.0);
-		const float limit = portrait ? (float)keyboard.starty : (float)_STATE->windowHeight;
-		const auto maxHeight = limit - tmpH - 3 * _STATE->textsize2;
-		auto childH = childView_->heightEstimate(maxHeight);
-		if (childH < maxHeight) {
-			auto normalPos = portrait ? _STATE->windowHeight / 3.0 : _STATE->windowHeight / 6.0;
-			auto limitPos = portrait ? (double)keyboard.starty : (double)_STATE->windowHeight;
-			if (childH < DISTANCE(normalPos, limitPos) - 2 * _STATE->textsize2)
-				alignY_ = -1;
-			else
-				alignY_ = limitPos - 2 * _STATE->textsize2 - childH - tmpH;
+		const float maxChild = std::max(0.f, bottom - 2 * margin - boxH - gap);
+		childH = std::clamp(childView_->heightEstimate(maxChild), 0.f, maxChild);
+		if (portrait) {
+			// The box keeps the home it has with no list at all, and the list
+			// hangs below it -- so it does not jump between an empty bank and a
+			// bank of one, and agrees with the list-less dialogs (rename,
+			// saveMidimapping). Lifted only if the list would pass the bottom
+			// margin, and then by exactly the overflow.
+			const float overflow = (top + boxH + gap + childH) - (bottom - margin);
+			if (overflow > 0.f) top -= overflow;
+		} else {
+			// Landscape puts the keyboard on the right, so the left column has
+			// the whole height and box-plus-list reads best centred as one
+			// group. Deliberately NOT the portrait rule: this is the layout
+			// that was checked on a device and approved.
+			top = (bottom - (boxH + gap + childH)) * .5f;
 		}
-		else
-			alignY_ = _STATE->textsize2;
 	}
-	else alignY_ = (int)(_STATE->textsize2);
+	if (top < margin) top = margin;
+	const float childTop = top + boxH + gap;
+
+	alignY_ = (int)top;
 	TextInputPopUp::init();
 
-	// Landscape: override text box to use the left portion (keyboard occupies the right)
+	// Landscape: the keyboard owns the right-hand side, so the box uses the left.
+	// Its y already came from alignY_, in both orientations.
 	if (!portrait) {
-		const float margin = _STATE->textsize2;
 		x = margin;
 		w = keyboard.startx - 2 * margin;
 		textInput1.width = w;
 		textInput1.startx = 0;
 		textInput1.stopx = w;
-		if (childView_ != nullptr)
-			y = margin * 2.0f;
-		else {
-			y = (_STATE->windowHeight - h) * 0.5f;
-			if (y < margin) y = margin;
-		}
 	}
 
 	// Keep current text, caret at end, blink reset
@@ -1227,11 +1298,9 @@ void AlphaPopUp::init() {
 	textInput1.hasFocus = true;
 	textInput1.resetTimer();
 	if (childView_ != nullptr) {
-		// In landscape the keyboard is to the right; left side uses full screen height for the list
-		const float childStopy = portrait ? (keyboard.starty - _STATE->textsize2) : (_STATE->windowHeight - _STATE->textsize2);
-		childView_->starty = y + h + _STATE->textsize2;
-		childView_->stopy = childStopy;
-		childView_->height = childView_->stopy - childView_->starty;
+		childView_->starty = childTop;
+		childView_->stopy = childTop + childH;
+		childView_->height = childH;
 		childView_->startx = x;
 		childView_->stopx = x + w;
 		childView_->width = w;
@@ -1246,10 +1315,10 @@ void AlphaPopUp::render(void* c) {
 	// Keyboard in its own window
 	keyboard.render(nullptr);
 
-	// Held-key repeat pulse: any typeable key, honouring the shift state
+	// Held-key repeat pulse (on-screen hold): honours the on-screen latch
 	if (int rk = keyboard.consumeRepeatKeyPulse(); rk >= 0) {
-		_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
 		InputEvent rep{}; rep.action = ACTION_KEY_UP; rep.pointer_id = rk;
+		rep.mods = (keyboard.isShift() || keyboard.isCaps()) ? MOD_SHIFT : 0;
 		textInput1.callback(rep);
 	}
 }
@@ -1263,52 +1332,43 @@ void AlphaPopUp::callback(const InputEvent& e) {
 		// Caps / page-switch: handled inside keyboard, no character output
 		if (ret == VKEY_CAPITAL) return;
 
-		// Temporary shift state while injecting the key
-		_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
+		// On-screen keys carry the latch state with the injected event
 		InputEvent e2 = e; e2.action = ACTION_KEY_UP; e2.pointer_id = ret;
+		e2.mods = (keyboard.isShift() || keyboard.isCaps()) ? MOD_SHIFT : 0;
 		textInput1.callback(e2);
-		_STATE->shiftPressed = (keyboard.isShift() || keyboard.isCaps());
 
 		// Confirm/Cancel via base helper (uses overridden onEnter() here)
 		handleConfirmCancelFromKeyboard(ret);
-	}
-
-	// 2) Hardware modifier keys
-	auto isHwShift = [](int vk) { return vk == VKEY_SHIFT || vk == VKEY_LSHIFT || vk == VKEY_RSHIFT; };
-	if (e.action == ACTION_KEY_DOWN) {
-		keyboard.setHardwareKeyHighlight(e.pointer_id, true);
-		if (isHwShift(e.pointer_id)) { keyboard.toggleShift(true);  return; }
-		if (e.pointer_id == VKEY_CAPITAL) { return; }
-		// OS auto-repeat arrives as additional KEY_DOWNs while a key is held;
-		// typing only on KEY_UP silently dropped them all. The repeats type
-		// here, and the eventual release is swallowed below so a held key does
-		// not end on one extra character.
-		if (VKeyTypesCharacter(e.pointer_id)) {
-			if (e.pointer_id == hwHeldVkey_) {
-				_STATE->shiftPressed = _STATE->shiftPressed || keyboard.isShift() || keyboard.isCaps();
-				InputEvent e2 = e; e2.action = ACTION_KEY_UP;
-				textInput1.callback(e2);
-				hwRepeated_ = true;
-			}
-			else hwHeldVkey_ = e.pointer_id;
-		}
-	}
-	else if (e.action == ACTION_KEY_UP) {
-		keyboard.setHardwareKeyHighlight(e.pointer_id, false);
-		if (isHwShift(e.pointer_id)) { keyboard.toggleShift(false); return; }
-		if (e.pointer_id == VKEY_CAPITAL) { keyboard.toggleCaps(); return; }
-	}
-	// 3) Regular hardware keys → input or confirm/cancel
-	if (e.action == ACTION_KEY_UP) {
-		if (e.pointer_id == hwHeldVkey_) hwHeldVkey_ = -1;
-		if (handleConfirmCancelFromKeyboard(e.pointer_id)) return; // calls onEnter() override above
-		if (hwRepeated_) { hwRepeated_ = false; return; } // repeats already typed this key
-		_STATE->shiftPressed = _STATE->shiftPressed || keyboard.isShift() || keyboard.isCaps();
-		textInput1.callback(e);
 		return;
 	}
 
-	// 4) Tap to place caret or dismiss
+	// 2) Hardware keys. Edits (characters, backspace, arrows) commit on
+	// KEY_DOWN with THAT event's own modifier snapshot — OS auto-repeats
+	// each type (held keys repeat), and chord release order cannot flip the
+	// character. Shift/Alt edges only drive the on-screen label latch, which
+	// previews the shifted key set but never decides a hardware character.
+	// Return/Escape stay on KEY_UP so a press that closes this popup cannot
+	// leak its release into whatever gets focus next.
+	if (e.action == ACTION_KEY_DOWN) {
+		keyboard.setHardwareKeyHighlight(e.pointer_id, true);
+		if (isShiftKey(e.pointer_id)) { keyboard.toggleShift(true);  return; }
+		if (e.pointer_id == VKEY_CAPITAL) return;
+		if (KeyEventEdits(e.pointer_id, e.keychar)) {
+			InputEvent e2 = e; e2.action = ACTION_KEY_UP;
+			e2.mods = FoldHwShift(e.mods, keyboard.isCaps());
+			textInput1.callback(e2);
+		}
+		return;
+	}
+	if (e.action == ACTION_KEY_UP) {
+		keyboard.setHardwareKeyHighlight(e.pointer_id, false);
+		if (isShiftKey(e.pointer_id)) { keyboard.toggleShift(false); return; }
+		if (e.pointer_id == VKEY_CAPITAL) { keyboard.toggleCaps(); return; }
+		handleConfirmCancelFromKeyboard(e.pointer_id); // calls onEnter() override above
+		return;
+	}
+
+	// 3) Tap to place caret or dismiss
 	if (e.action == ACTION_DOWN) {
 		handleTapOrForwardToInput(e);
 		return;

@@ -294,10 +294,40 @@ enum paramternumber {
     // user preset that stores one. They therefore inherit the PAD block's caveat above —
     // with PA_ENABLE_PAD 0 these fall past NUM_PARAMS and would have to be #if'd out too.
     LFO1PHASE,    LFO2PHASE,
+    // ---- 4-LFO multi-destination matrix (2026-08-18) ----------------------------
+    // One bipolar depth PER DESTINATION per LFO: id = LFO_MD_FIRST + lfo*LFO_MD_NDEST
+    // + (dest-1), dest 1..21 in LFO-dest-enum order (PITCH..NOISE). The matrix is the
+    // ENGINE'S ONLY modulation source; the legacy LFOnDEST/LFOnDEPTH pair lives on as
+    // a UI WINDOW onto matrix[DEST] (synth.cpp lfoWindowTick) and as the load-time
+    // compatibility source (Preset::foldLegacyLfoRoutes): an old preset or DAW project
+    // that stores only the pair is folded into the matrix on load, so it sounds
+    // identical and the knob still reads true. Appended at the END like everything
+    // since the PAD block — ids are positions.
+    LFO_MD_FIRST,
+    LFO_MD_LAST = LFO_MD_FIRST + 4 * 21 - 1,
+    // LFO3/LFO4 (full sets, same window semantics as LFO1/2)
+    LFO3RATE, LFO3DEPTH, LFO3WAVE, LFO3DEST, LFO3PHASE,
+    LFO4RATE, LFO4DEPTH, LFO4WAVE, LFO4DEST, LFO4PHASE,
+    // ---- ensemble chorus, an FX unit (2026-08-20) --------------------------------
+    // Same shape as the other three effects: a POWER switch with no initvalue, so
+    // it is off unless a preset asks, and the bank's "every preset is the raw
+    // voice" rule still holds for the other 75. Sits on the MIXED output, which is
+    // where a string machine's ensemble sits: a delay is linear, so per-voice with
+    // a shared LFO would be the same result at ten times the cost, and per-voice
+    // with INDEPENDENT LFOs would make a chord into N separately wobbling notes
+    // rather than one instrument. Appended at the END — ids are positions.
+    CHORUSPOW,
+    CHORUSMIX,
+    CHORUSDEPTH,
+    CHORUSRATE,
 #if PA_ENABLE_PAD
     NUM_PARAMS
 #endif
 };
+static constexpr int LFO_MD_NDEST = 21;   // dests 1..21 (0 = OFF has no depth slot)
+static inline constexpr int lfoMdId(int lfo, int dest) {   // lfo 0..3, dest 1..21
+    return LFO_MD_FIRST + lfo * LFO_MD_NDEST + (dest - 1);
+}
 static constexpr int NUM_PARAMETERS = NUM_PARAMS;
 
 #endif //GRAINSTORM_TYPES_H

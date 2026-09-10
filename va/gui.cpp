@@ -209,10 +209,15 @@ enum fxspaces {
 #endif
     SPACE_LFO1,
     SPACE_LFO2,
+    SPACE_LFO3,
+    SPACE_LFO4,
+    // Appended at the END, never mid-enum: FXSPACE persists the id, and a shifted
+    // id is what made a saved space open the wrong tab (and worse) before.
+    SPACECHORUS,
     NUMFXSPACES
 };
-static std::vector<std::string> fxspacenames = {"PHASER", "DELAY", "REVERB"};
-static std::vector<float> fxvals = {0, 1,2};
+static std::vector<std::string> fxspacenames = {"PHASER", "DELAY", "REVERB", "CHORUS"};
+static std::vector<float> fxvals = {0, 1, 2, SPACECHORUS};
 static Layout *spaces[NUMSPACES];
 static Layout *fxspaces[NUMFXSPACES];
 
@@ -429,11 +434,23 @@ static sk_sp<SkImage> LoadVoltaicPNG() {
 
 #ifdef ANDROID
 
+// Java calls this once per billing answer -- a cached grant, the query result,
+// an error -- and the later ones carry the better answer, so dofastrender is
+// always updated. The handshake is not: readyForUiSetup is a binary_semaphore
+// acquired exactly once per process (uiSetupThr runs behind initdone), and
+// release() past a count of one is undefined. Only the first call signals it.
+//
+// A late answer is not lost by stopping at the semaphore: the cap thread
+// re-reads dofastrender after its sleep, so a purchase confirmed while the
+// countdown runs still disarms the wall.
+static std::atomic<bool> gUiSetupSignalled{false};
+
 void guiSetup(JNIEnv *env, jclass obj, jboolean fastrender, jint screenWidth, jint screenHeight) {
     tsl::AppState* _appState = __STATE;
     if (_appState) {
         _STATE->dofastrender = fastrender;
-        _STATE->readyForUiSetup.release();
+        if (!gUiSetupSignalled.exchange(true))
+            _STATE->readyForUiSetup.release();
     }
 }
 #endif
@@ -615,6 +632,13 @@ public:
         : View(appState, sf, aspect, align, 10, true, "WTDisp"), _osc(osc),
           _warpTypeId(warpTypeId), _warpAmtId(warpAmtId), _warpToId(warpToId) {}
 
+    // The PAD page's form of the same view: `osc` is a PAD mailbox slot
+    // (WT_DISPLAY_OSCS + oscillator) and there is no warp machinery on PAD, so the
+    // runtime-warp pass is parked and the published block is drawn as-is.
+    WavetableDisplay(tsl::AppState* appState, float sf, int aspect, int align, int osc)
+        : View(appState, sf, aspect, align, 10, true, "WTDisp"), _osc(osc),
+          _warpTypeId(-1), _warpAmtId(-1), _warpToId(-1) {}
+
     void addRecursiveDraw() override { _dirty = true; View::addRecursiveDraw(); }
     void redraw() override           { _dirty = true; View::redraw(); }
 
@@ -623,9 +647,12 @@ public:
         // the only cross-thread read here, and it is a pointer move.
         if (auto d = wtTakeDisplay(_osc)) { _frames = std::move(d); _dirty = true; }
 
-        const int   warpT = (int)std::lround(_STATE->params[0][_warpTypeId].load());
-        const float warpA = _STATE->params[0][_warpAmtId].load();
-        const float warpB = _STATE->params[0][_warpToId].load();
+        // A PAD instance has no warp ids; 0 amounts make every warp branch below a
+        // no-op (wtApplyRuntimeWarp bails on amount 0), so one guard here covers it.
+        const bool  hasWarp = _warpTypeId >= 0;
+        const int   warpT = hasWarp ? (int)std::lround(_STATE->params[0][_warpTypeId].load()) : 0;
+        const float warpA = hasWarp ? (float)_STATE->params[0][_warpAmtId].load() : 0.f;
+        const float warpB = hasWarp ? (float)_STATE->params[0][_warpToId].load() : 0.f;
 
         // Runtime warps are not baked into the block: wtKey folds them onto the clean
         // set, so their amount never reaches the key and no republish happens when it
@@ -1001,8 +1028,12 @@ void tsl::app::guiSetup(tsl::AppState* _appState) {
 #else
     _appState->dofastrender = true;
 #endif
-    if (_STATE->dofastrender.load()) {
-        Preset::readPresets(_appState);
+    // User presets and MIDI mappings load for everyone: the free tier is
+    // time-limited (startSessionCap), not feature-limited. Presets saved by
+    // free users before this model existed were always written to disk, so
+    // they appear here for the first time.
+    Preset::readPresets(_appState);
+    {
         std::vector<std::shared_ptr<MIDIHEADER2>> mappings;
         getMappings(mappings);
         if (!mappings.empty())
@@ -1113,7 +1144,8 @@ void tsl::app::guiSetup(tsl::AppState* _appState) {
     settingsbutton->padding = 10.f;
     panel->addChild(settingsbutton);
 
-    if (_STATE->dofastrender) {
+    {
+        // Recording is free too — the session cap is the only gate.
         View *recb = new RecordButton(_appState, SYM, 0, START_ALIGN);
         recb->padding = 10.f;
         panel->addChild(recb);
@@ -1278,9 +1310,19 @@ void tsl::app::guiSetup(tsl::AppState* _appState) {
     // constants now, see PAD_FIXED_BW in vco.h. All four were BUILD inputs, so each
     // one cost a set rebuild to move; what is left is the table, the morph range and
     // its EG, which is everything that responds in real time.
-    auto buildPadSpace = [&](Layout* spaceosc, int fxidx, int padsel,
+    auto buildPadSpace = [&](Layout* spaceosc, int fxidx, int osc, int padsel,
                              int wtpos, int morphEg, int morphTo) {
         auto sp = fxspaces[fxidx] = new VerticalLayout(_appState, WRAP, 0, CENTER_ALIGN, spaceosc, true);
+        // The same stack view the WT page has, fed from the PAD mailbox slot (the
+        // audio thread publishes PadSet::display under WT_DISPLAY_OSCS + osc). No
+        // warp ids: PAD has no warp. END_ALIGN docks it right, exactly as on the WT
+        // page; the existing START_ALIGN children lay out from the left edge
+        // independently (initVertical's le group), and their ~40% plus this 33.3%
+        // leave clear water between the two groups at every checked size.
+        auto disp = new WavetableDisplay(_appState, 33.3f, PERCENTAGE_FROM_PARENT_View, END_ALIGN,
+                                         WT_DISPLAY_OSCS + osc);
+        disp->paddingleft = disp->paddingright = disp->paddingtop = disp->paddingbottom = 10.f;
+        sp->addChild(disp);
         // Selectors first at a fixed ratio, START_ALIGN — children compute their own
         // size inside it (same idiom as the OSC subsection's WAVE / AMP EG column).
         auto row1 = new HorizontalLayout(_appState, 6.f, RATIO_FROM_PARENT_View, START_ALIGN, sp);
@@ -1295,15 +1337,16 @@ void tsl::app::guiSetup(tsl::AppState* _appState) {
         // the wavetable oscillator's, which they used to share.
         row1->addChild(new Selector2(_appState, VIEW_COMPUTESIZE, VIEW_COMPUTESIZE, START_ALIGN,
                                      pwmodsrcnames, pwmodsrcvals, morphEg, 0, 1, "MRPH EG"));
-        // Second column beside the selectors: MORPH A and B. This used to carry four
-        // more faders under them — the build-time params — which is what the layout
-        // comment about keeping instant controls apart from rebuild-triggering ones
-        // was for. Both remaining faders are the modulatable pair.
-        { auto _w = new VerticalLayout(_appState, WRAP, 0, END_ALIGN, sp);
-          const int ids[2] = {wtpos, morphTo};
+        // MORPH A and B beside the selectors, as left-aligned knobs — the ROUTE VEL
+        // idiom (knob in its own column, sized by knob_height_total). This used to be
+        // a fader column that also carried the four build-time params; those are
+        // fixed constants now, so the modulatable pair is all that is left.
+        { const int ids[2] = {wtpos, morphTo};
           for (int i = 0; i < 2; i++) {
-              auto _s = new SliderVert(_appState, WRAP, 0, CENTER_ALIGN, ids[i], 0, 1, _w);
-              _s->paddingbottom = 5.f;
+              auto _w = new HorizontalLayout(_appState, 6.f, RATIO_FROM_MAIN_WINDOW, START_ALIGN, sp);
+              auto _k = new Knob(_appState, VALUE_FROM_POINTER, VALUE_FROM_POINTER, START_ALIGN, ids[i]);
+              _k->size_reference = &_STATE->knob_height_total;
+              _w->addChild(_k);
           } }
       };
 #endif // PA_ENABLE_PAD
@@ -1338,7 +1381,7 @@ void tsl::app::guiSetup(tsl::AppState* _appState) {
     buildWtSpace(spaceosc1, SPACE_VCO1_3, 0, VCO1WTSEL, VCO1WTPOS, VCO1PWMODSRC, VCO1WARPTYPE, VCO1WARPAMT, VCO1WARPEG, VCO1WARPTO, VCO1MORPHTO);
 
 #if PA_ENABLE_PAD
-    buildPadSpace(spaceosc1, SPACE_VCO1_6, VCO1PADSEL, VCO1PADPOS, VCO1PADMEG, VCO1PADMTO);
+    buildPadSpace(spaceosc1, SPACE_VCO1_6, 0, VCO1PADSEL, VCO1PADPOS, VCO1PADMEG, VCO1PADMTO);
 #endif
     buildModalSpace(spaceosc1, SPACE_VCO1_5, VCO1MODALCH, VCO1MODALDEC, VCO1MODALBRT, VCO1MODALHRD, VCO1MODALPOS);
 
@@ -1377,7 +1420,7 @@ void tsl::app::guiSetup(tsl::AppState* _appState) {
     buildWtSpace(spaceosc2, SPACE_VCO2_3, 1, VCO2WTSEL, VCO2WTPOS, VCO2PWMODSRC, VCO2WARPTYPE, VCO2WARPAMT, VCO2WARPEG, VCO2WARPTO, VCO2MORPHTO);
 
 #if PA_ENABLE_PAD
-    buildPadSpace(spaceosc2, SPACE_VCO2_6, VCO2PADSEL, VCO2PADPOS, VCO2PADMEG, VCO2PADMTO);
+    buildPadSpace(spaceosc2, SPACE_VCO2_6, 1, VCO2PADSEL, VCO2PADPOS, VCO2PADMEG, VCO2PADMTO);
 #endif
     buildModalSpace(spaceosc2, SPACE_VCO2_5, VCO2MODALCH, VCO2MODALDEC, VCO2MODALBRT, VCO2MODALHRD, VCO2MODALPOS);
 
@@ -1446,7 +1489,7 @@ void tsl::app::guiSetup(tsl::AppState* _appState) {
     buildModalSpace(spaceosc3, SPACE_VCO3_6, VCO3MODALCH, VCO3MODALDEC, VCO3MODALBRT, VCO3MODALHRD, VCO3MODALPOS);
 
 #if PA_ENABLE_PAD
-    buildPadSpace(spaceosc3, SPACE_VCO3_7, VCO3PADSEL, VCO3PADPOS, VCO3PADMEG, VCO3PADMTO);
+    buildPadSpace(spaceosc3, SPACE_VCO3_7, 2, VCO3PADSEL, VCO3PADPOS, VCO3PADMEG, VCO3PADMTO);
 
 #endif // PA_ENABLE_PAD
 
@@ -1484,19 +1527,65 @@ void tsl::app::guiSetup(tsl::AppState* _appState) {
       spacefilt->addChild(_w); }
 //    spacefilt->addChild(new Dumm());
     // LFO category
-    static std::vector<std::string> lfosubnames = {"LFO1", "LFO2"};
-    static std::vector<float> lfosubvals = {0, 1};
+    // DEST selector that MARKS active routes: any destination whose matrix slot
+    // (lfoMdId) is nonzero gets a bullet, in the popup and on the value label, so
+    // the routes an LFO is driving are visible without cursoring through all 21.
+    // The mark state is polled in render() against a bitmask — string rebuilds and
+    // the popup re-init only happen when a route appears or disappears.
+    class LfoDestSelector : public tsl::graphics::Selector2 {
+    public:
+        LfoDestSelector(tsl::AppState* appState, float sf, int ar, int align,
+                        std::vector<std::string>& n, std::vector<float>& v,
+                        uint16_t id, const char* title, int lfoIndex)
+            : Selector2(appState, sf, ar, align, n, v, id, 0, 6, title),
+              lfo(lfoIndex), base(n) {}
+
+        void render(void* ctx) override {
+            refreshMarks();
+            Selector2::render(ctx);
+        }
+
+    protected:
+        void addRecursiveDraw() override {
+            lastMask = 0xffffffffu;   // force one rebuild against current state
+            Selector2::addRecursiveDraw();
+        }
+
+    private:
+        void refreshMarks() {
+            uint32_t mask = 0;
+            for (int d = 1; d <= LFO_MD_NDEST; d++)
+                if (_appState->params[0][lfoMdId(lfo, d)].load() != 0.f)
+                    mask |= 1u << d;
+            if (mask == lastMask) return;
+            lastMask = mask;
+            // names has no OFF row: list index = dest - 1
+            for (int d = 1; d <= LFO_MD_NDEST; d++)
+                names[d - 1] = (mask & (1u << d)) ? base[d - 1] + " \xE2\x80\xA2" : base[d - 1];
+            popupview.init();
+        }
+        int lfo;
+        std::vector<std::string> base;
+        uint32_t lastMask{0xffffffffu};
+    };
+    static std::vector<std::string> lfosubnames = {"LFO1", "LFO2", "LFO3", "LFO4"};
+    static std::vector<float> lfosubvals = {0, 1, 2, 3};
     static std::vector<std::string> lfowavenames = {"SIN", "TRI", "SAW", "SQR"};
     static std::vector<float> lfowavevals = {0, 1, 2, 3};
     // Keep in step with lfoDestNames in setup.cpp — the two lists are duplicated.
     // This is a full-row popup, so there is no reason for the vowel-dropping: MRPH
     // and STRK were squeezes of words that fit perfectly well.
     // Keep in step with lfoDestNames in setup.cpp — that copy is the host's.
-    static std::vector<std::string> lfodestnames = {"OFF", "PITCH", "FILT", "AMP", "PW1", "PW2", "PW3", "RES",
+    // No OFF entry: with the multi-dest matrix the cursor always points at a real
+    // destination and the DEPTH knob always edits something. "Off" is a zero slot.
+    // Values 1..21 are the STORED dest ids and must never be renumbered; the old
+    // 0 (OFF) is remapped to 1 at load (foldLegacyLfoRoutes) — sound-neutral,
+    // because a cursor carries no route of its own.
+    static std::vector<std::string> lfodestnames = {"PITCH", "FILT", "AMP", "PW1", "PW2", "PW3", "RES",
                                                     "MORPH1", "MORPH2", "MORPH3", "WARP1", "WARP2", "WARP3",
                                                     "UNI1", "UNI2", "UNI3", "STRIKE",
                                                     "GAIN1", "GAIN2", "GAIN3", "NOISE"};
-    static std::vector<float> lfodestvals = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+    static std::vector<float> lfodestvals = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
                                              18, 19, 20, 21};
     {
         auto lfodummy = new HorizontalLayout(_appState, 6., RATIO_FROM_PARENT_View, START_ALIGN, spacelfo);
@@ -1519,11 +1608,17 @@ void tsl::app::guiSetup(tsl::AppState* _appState) {
               _k->size_reference = &_STATE->knob_height_total; _w->addChild(_k); }
             s->addChild(new Selector2(_appState, 6.f, RATIO_FROM_PARENT_View, START_ALIGN, lfowavenames, lfowavevals,
                                       waveParam, 0, 3, "WAVE"));
-            s->addChild(new Selector2(_appState, 6.f, RATIO_FROM_PARENT_View, START_ALIGN, lfodestnames, lfodestvals,
-                                      destParam, 0, 6, "DEST"));
+            s->addChild(new LfoDestSelector(_appState, 6.f, RATIO_FROM_PARENT_View, START_ALIGN,
+                                            lfodestnames, lfodestvals, destParam, "DEST",
+                                            spaceIdx - SPACE_LFO1));
         };
+        // DEPTH here is the WINDOW knob: it shows and edits the multi-dest matrix
+        // slot the DEST selector points at (lfoWindowTick in synth.cpp). Browsing
+        // DEST re-seats the knob; turning the knob writes the selected route.
         buildLfoSpace(SPACE_LFO1, LFO1RATE, LFO1DEPTH, LFO1WAVE, LFO1DEST, LFO1PHASE);
         buildLfoSpace(SPACE_LFO2, LFO2RATE, LFO2DEPTH, LFO2WAVE, LFO2DEST, LFO2PHASE);
+        buildLfoSpace(SPACE_LFO3, LFO3RATE, LFO3DEPTH, LFO3WAVE, LFO3DEST, LFO3PHASE);
+        buildLfoSpace(SPACE_LFO4, LFO4RATE, LFO4DEPTH, LFO4WAVE, LFO4DEST, LFO4PHASE);
     }
 
     // Two SEQUENCE pages used to share one label; OPTIONS is the toggles page.
@@ -1653,6 +1748,25 @@ void tsl::app::guiSetup(tsl::AppState* _appState) {
     { auto _w = new HorizontalLayout(_appState, 6.f, RATIO_FROM_MAIN_WINDOW, START_ALIGN, spacerev); auto _k = new Knob(_appState, VALUE_FROM_POINTER, VALUE_FROM_POINTER, START_ALIGN, REV3MIX); _k->size_reference = &_STATE->knob_height_total; _w->addChild(_k); }
     { auto _w = new HorizontalLayout(_appState, 6.f, RATIO_FROM_MAIN_WINDOW, START_ALIGN, spacerev); auto _k = new Knob(_appState, VALUE_FROM_POINTER, VALUE_FROM_POINTER, START_ALIGN, REV3GAIN); _k->size_reference = &_STATE->knob_height_total; _w->addChild(_k); }
 
+    auto spacechorus = new VerticalLayout(_appState, WRAP, 0, CENTER_ALIGN, spacefx);
+    spacechorus->overlap = true;
+    fxspaces[SPACECHORUS] = spacechorus;
+    {
+        auto onffdumch = new VerticalLayout(_appState, 6.f, RATIO_FROM_PARENT_View, START_ALIGN, spacechorus);
+        auto onoffdumch2 = new HorizontalLayout(_appState, VALUE_FROM_POINTER, VALUE_FROM_POINTER, CENTER_ALIGN,
+                                                onffdumch);
+        onoffdumch2->size_reference = &_DATA->panelheight;
+        auto offbuttonch = new NormalButton(_appState, SYM, 0, START_ALIGN,
+                                            reinterpret_cast<const char8_t *>(ICON_MD_POWER_SETTINGS_NEW),
+                                            reinterpret_cast<const char8_t *>(ICON_MD_POWER_SETTINGS_NEW),
+                                            CHORUSPOW);
+        offbuttonch->padding = 10.f;
+        onoffdumch2->addChild(offbuttonch);
+    }
+    { auto _w = new HorizontalLayout(_appState, 6.f, RATIO_FROM_MAIN_WINDOW, START_ALIGN, spacechorus); auto _k = new Knob(_appState, VALUE_FROM_POINTER, VALUE_FROM_POINTER, START_ALIGN, CHORUSMIX); _k->size_reference = &_STATE->knob_height_total; _w->addChild(_k); }
+    { auto _w = new HorizontalLayout(_appState, 6.f, RATIO_FROM_MAIN_WINDOW, START_ALIGN, spacechorus); auto _k = new Knob(_appState, VALUE_FROM_POINTER, VALUE_FROM_POINTER, START_ALIGN, CHORUSDEPTH); _k->size_reference = &_STATE->knob_height_total; _w->addChild(_k); }
+    { auto _w = new HorizontalLayout(_appState, 6.f, RATIO_FROM_MAIN_WINDOW, START_ALIGN, spacechorus); auto _k = new Knob(_appState, VALUE_FROM_POINTER, VALUE_FROM_POINTER, START_ALIGN, CHORUSRATE); _k->size_reference = &_STATE->knob_height_total; _w->addChild(_k); }
+
     auto spacedel = new VerticalLayout(_appState, WRAP, 0, CENTER_ALIGN, spacefx);
     spacedel->overlap = true;
     fxspaces[SPACEDELAY] = spacedel;
@@ -1718,15 +1832,17 @@ void tsl::app::guiSetup(tsl::AppState* _appState) {
     // Keytrack routing. The tab is new — SPACE_ROUTE_KEY has been in the fxspaces
     // enum since the ROUTE page was built, but nothing ever added it to
     // routespacenames, so it was never reachable and FILT had no control at all.
+    // Two routes only, so they get the VEL page's left-aligned knobs rather than
+    // the AT/MW fader bank.
     //
-    // FILT defaults to the TOP of its range, unlike every other fader in this
+    // FILT defaults to the TOP of its range, unlike every other control in this
     // section. That is not a quirk: the cutoff has always been built upward from the
     // played note, so full tracking is the behaviour this synth has always had and
-    // the fader only ever takes it away. Pulling it down is what makes a fixed
+    // the knob only ever takes it away. Pulling it down is what makes a fixed
     // cutoff — a formant, or a MODL body that stays put while the notes move.
     auto spacerouteKey = fxspaces[SPACE_ROUTE_KEY] = new VerticalLayout(_appState, WRAP, 0, CENTER_ALIGN, spaceroute, true);
-    addFader(spacerouteKey, KEYTRACK_TO_FILT);
-    addFader(spacerouteKey, KEYTRACK_TO_DECAY);
+    { auto _w = new HorizontalLayout(_appState, 6.f, RATIO_FROM_MAIN_WINDOW, START_ALIGN, spacerouteKey); auto _k = new Knob(_appState, VALUE_FROM_POINTER, VALUE_FROM_POINTER, START_ALIGN, KEYTRACK_TO_FILT); _k->size_reference = &_STATE->knob_height_total; _w->addChild(_k); }
+    { auto _w = new HorizontalLayout(_appState, 6.f, RATIO_FROM_MAIN_WINDOW, START_ALIGN, spacerouteKey); auto _k = new Knob(_appState, VALUE_FROM_POINTER, VALUE_FROM_POINTER, START_ALIGN, KEYTRACK_TO_DECAY); _k->size_reference = &_STATE->knob_height_total; _w->addChild(_k); }
 
 #ifdef __ANDROID__
     ATTACH
@@ -1745,10 +1861,252 @@ void tsl::app::guiSetup(tsl::AppState* _appState) {
 
 }
 
+// ---------------------------------------------------------------------------
+// Free-session cap. The free tier is the full instrument — factory bank,
+// preset saving, MIDI mapping, recording — for five minutes per process, then
+// a licence-style modal overlay (the lc.cpp dialog mechanism: the focus grab
+// kills every input behind it) ends the session. One purchase (dofastrender)
+// removes the cap; desktop and iOS force that flag, so only Android arms this.
+#ifdef __ANDROID__
+#include <DynamicDialog.h>
+#include <chrono>
+
+// Process-lifetime, like gBuildOverlay: a new session is a new process, so the
+// wall never comes down once it is up — it only re-registers after a rebuild.
+static std::shared_ptr<tsl::graphics::DynamicDialog> gSessionWall;
+
+static void invokeUpgradeActivity() {
+    ATTACH
+    if (env && tsl::android::activityclass) {
+        jmethodID jmid = env->GetStaticMethodID(tsl::android::activityclass, "invokeUpgrade", "()V");
+        if (jmid) {
+            env->CallStaticVoidMethod(tsl::android::activityclass, jmid);
+        } else {
+            env->ExceptionClear();
+        }
+    }
+    DETACH
+}
+
+// One round trip: reports whether the model notice was ever shown and marks it
+// shown, so the dialog appears exactly once per install. Defaults to NOT seen:
+// if the JNI lookup fails (e.g. the method lost its proguard keep), the notice
+// nags every launch — visible and reported — instead of silently never showing.
+static bool capNoticeSeen() {
+    bool seen = false;
+    ATTACH
+    if (env && tsl::android::activityclass) {
+        jmethodID jmid = env->GetStaticMethodID(tsl::android::activityclass, "capNoticeSeen", "()Z");
+        if (jmid) {
+            seen = env->CallStaticBooleanMethod(tsl::android::activityclass, jmid);
+        } else {
+            env->ExceptionClear();
+        }
+    }
+    DETACH
+    return seen;
+}
+
+// The trial gate's verdict, pushed from Java once resolved: 0 none, 1 active,
+// 2 expired. File-scope rather than in DATA because Java can answer before
+// native setup has allocated it -- the mint runs on its own thread from the
+// first onCreate.
+std::atomic<int> gTrialState{tsl::app::kTrialNone};
+
+static void showWall(tsl::AppState* _appState, const char* title) {
+    if (auto old = gSessionWall) {
+        // The window was rebuilt behind an up wall; re-register on the new root.
+        old->delCB();
+        old->deldraw();
+    }
+    auto d = std::make_shared<tsl::graphics::DynamicDialog>(_appState);
+    d->setTitle(title);
+    d->setShowKeyboard(false);
+    d->setCustomButton("UNLOCK FULL VERSION", [_appState]() {
+        _appState->WorkerQueue.add_task([]() { invokeUpgradeActivity(); });
+    });
+    // The wall must not be dismissable. cancelDialog()'s no-callback fallback
+    // removes the view, so an outside tap or BACK (ESC) would take the wall
+    // down. A present-but-inert callback swallows every dismissal instead.
+    d->onCompleteCallback = [](const tsl::graphics::DynamicDialog::DialogResult&) {};
+    d->init();
+    d->addDraw();
+    d->addCB();
+    gSessionWall = d;
+}
+
+static void showSessionWall(tsl::AppState* _appState) {
+    // Only reachable when the gate could not start or check a trial, so say that
+    // rather than describing a "free session" as though ten minutes were the
+    // offer. It tells the user what happened and what fixes it.
+    showWall(_appState,
+             "This session has ended. Voltaic could not reach us to start your "
+             "14-day trial, so sessions run for ten minutes until it can. Connect "
+             "to the internet and reopen the app to begin the trial.");
+}
+
+// Distinct copy on purpose. "Your session has ended" is wrong for somebody whose
+// 14 days are up -- they did not run out of a session, they ran out of trial --
+// and it is wrong again for a first launch that never had a session at all.
+static void showTrialEndedWall(tsl::AppState* _appState) {
+    showWall(_appState,
+             "Your 14-day trial has ended. Unlock the full version to keep "
+             "playing - one payment, no subscription.");
+}
+
+// Pushed from TrialGate.java. May land before the UI exists, during the
+// countdown, or after the wall is already up -- all three are handled here.
+void tsl::app::setTrialState(tsl::AppState* _appState, int state) {
+    gTrialState.store(state);
+    if (state != kTrialExpired || _appState == nullptr)
+        return;
+    // A purchase outranks any trial verdict, always. Without this a device that
+    // trialled, expired, and THEN bought gets walled on the very next launch:
+    // the stored token still says expired, this fires before Play has answered,
+    // and the wall cannot be dismissed. The customer pays and the app dies.
+    if (_STATE->dofastrender.load())
+        return;
+    // A signed "expired" verdict is the server telling a device that wiped its
+    // token that its turn is over. Show it now rather than letting the countdown
+    // run: the answer is already known, and waiting would look like a grant.
+    if (_DATA->sessionExpired.exchange(true))
+        return;                      // a wall is already up; nothing to add
+    _DATA->sessionMute.store(true);
+    showTrialEndedWall(_appState);
+}
+
+void tsl::app::startSessionCap(tsl::AppState* _appState) {
+    if (_STATE->dofastrender.load())
+        return;
+
+    const int trial = gTrialState.load();
+    // A valid trial is the full instrument. No cap runs underneath it -- that
+    // would defeat the point of having a trial at all.
+    if (trial == kTrialActive)
+        return;
+    if (trial == kTrialExpired) {
+        _DATA->sessionExpired.store(true);
+        _DATA->sessionMute.store(true);
+        showTrialEndedWall(_appState);
+        return;
+    }
+
+    if (_DATA->sessionExpired.load()) {
+        // A window rebuild (activity relaunch), not a new process: the session
+        // stays over, the wall comes straight back.
+        showSessionWall(_appState);
+        return;
+    }
+    if (_DATA->capThread.joinable())
+        return; // timer already armed this process
+    _DATA->capThread = std::thread([_appState]() {
+        constexpr int64_t kFreeSessionMs = 10 * 60 * 1000;
+
+        // Let the trial gate answer before committing to the capped story. The
+        // mint is a network round trip kicked off at onCreate and normally lands
+        // in well under a second, but this runs the moment the window is up --
+        // so without the wait a perfectly good trial gets told "we could not
+        // reach you", which is wrong, alarming, and self-contradicting.
+        //
+        // Costs nothing when there IS no trial: the notice is not urgent, and
+        // the app plays uncapped throughout the wait either way.
+        for (int i = 0; i < 24 && gTrialState.load() == kTrialNone; i++) {
+            _STATE->waitNotify.sleep_for(250);
+            if (_STATE->destroyRequested.load())
+                return;
+        }
+        {
+            const int resolved = gTrialState.load();
+            if (resolved == kTrialActive || _STATE->dofastrender.load())
+                return;                       // trial arrived, or a purchase did
+            if (resolved == kTrialExpired) {
+                if (_DATA->sessionExpired.exchange(true))
+                    return;
+                _DATA->sessionMute.store(true);
+                showTrialEndedWall(_appState);
+                return;
+            }
+        }
+
+        if (!capNoticeSeen()) {
+            // Token rendezvous, not acquire_slot()+wait: only THIS dialog's OK
+            // (or shutdown) can satisfy the wait.
+            auto token = _STATE->waitNotify.begin_wait();
+            auto notice = std::make_unique<tsl::graphics::DynamicDialog>(_appState);
+            // Shown once per install, and only ahead of a capped countdown -- an
+            // ordinary first launch mints a trial and never gets here.
+            notice->setTitle("Voltaic could not reach us to start your 14-day free "
+                             "trial, so sessions are limited to ten minutes for now. "
+                             "Connect to the internet and reopen the app to start "
+                             "the trial.");
+            notice->setShowKeyboard(false);
+            notice->setButtonMode(tsl::graphics::DynamicDialog::ButtonMode::OK_ONLY);
+            notice->onCompleteCallback = [_appState, token](const tsl::graphics::DynamicDialog::DialogResult& r) {
+                // OK only: an outside tap or BACK arrives as confirmed=false and
+                // is ignored, so the notice cannot be lost to a stray touch (and
+                // the present callback keeps cancelDialog from removing the view).
+                if (r.confirmed)
+                    _STATE->waitNotify.complete(token);
+            };
+            notice->init();
+            notice->addDraw();
+            notice->addCB();
+            _STATE->waitNotify.wait_for_signal(token); // blocks until OK / shutdown
+            notice->delCB();
+            notice->deldraw();
+            if (_STATE->destroyRequested.load())
+                return;
+            // The notice blocks until OK, which can be minutes. The world may
+            // have moved on underneath it -- a phone that found signal, or a
+            // purchase that completed -- so re-read before starting a countdown
+            // that no longer applies.
+            if (gTrialState.load() == kTrialActive || _STATE->dofastrender.load())
+                return;
+        }
+        // The clock starts after the notice: the notice is modal, so counting
+        // under it would bill time the user cannot play. sleep_for is immune to
+        // stray wakes — only shutdown ends it early.
+        _STATE->waitNotify.sleep_for(kFreeSessionMs);
+        if (_STATE->destroyRequested.load())
+            return;
+        if (_STATE->dofastrender.load())
+            return;
+        // The gate may have answered while the countdown ran -- a phone that
+        // found signal, or a purchase that completed. Re-read it here for the
+        // same reason dofastrender is re-read: the thread slept through it.
+        const int late = gTrialState.load();
+        if (late == kTrialActive)
+            return;                  // trial arrived; no wall, no cap
+        if (_DATA->sessionExpired.exchange(true))
+            return;                  // setTrialState already put a wall up
+        _DATA->sessionMute.store(true); // synth.cpp glides postgain to 0
+        if (late == kTrialExpired)
+            showTrialEndedWall(_appState);
+        else
+            showSessionWall(_appState);
+        // Let the fade finish before the stream stops — stream->stop() cuts at
+        // a buffer boundary, which clicks if anything is still sounding.
+        _STATE->waitNotify.sleep_for(400);
+        if (_STATE->destroyRequested.load())
+            return;
+        _appState->WorkerQueue.add_task([_appState]() {
+            // recStop after the fade: the take ends on the fade-out, not a chop.
+            if (_appState->player.isrecording.load())
+                _appState->player.recStop();
+            if (_appState->player.isPlaying())
+                _appState->player.stop();
+        });
+    });
+}
+#endif // __ANDROID__
+
 void tsl::app::setup_main_window(tsl::AppState* _appState) {
     _STATE->rootwin->redraw();
     _STATE->rootwin->addCB();
     _STATE->rootwin->addDraw();
     callbackFXSwitch(_appState, GUISPACE, (int) _STATE->params[0][GUISPACE].load());
     _DATA->views.loadInfo->redraw();
+#ifdef __ANDROID__
+    startSessionCap(_appState);
+#endif
 }

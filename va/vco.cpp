@@ -1358,7 +1358,9 @@ struct WtDispBox {
     std::atomic<unsigned> w{0}, r{0};
     uint64_t lastKey{WT_KEY_NONE};   // audio thread only
 };
-std::array<WtDispBox, WT_DISPLAY_OSCS> gWtDispBox{};
+// Twice WT_DISPLAY_OSCS: the top half of both arrays is the PAD displays — see the
+// slot note beside VA_DISPLAY_SLOTS in vco.h.
+std::array<WtDispBox, VA_DISPLAY_SLOTS> gWtDispBox{};
 }
 
 void wtPublishDisplay(int osc, int tableNum, int warpType, const WtRange& range) {
@@ -1378,6 +1380,29 @@ void wtPublishDisplay(int osc, int tableNum, int warpType, const WtRange& range)
     b.lastKey = key;
 }
 
+// The PAD half of the mailbox. Same ring, same producer rule (only empty slots are
+// written, a full ring drops and retries), same key gate — just padKey instead of
+// wtKey and getPadSetIfReady instead of the wavetable cache. getPadSetIfReady takes
+// gPadMtx, which the audio thread already accepts for exactly this kind of brief
+// lookup (refreshPad does the same), and the key gate means it is only paid when
+// the PAD params actually moved.
+static uint32_t padKey(const PadParams& p);
+static std::shared_ptr<PadSet> getPadSetIfReady(const PadParams& p, double sr);
+void padPublishDisplay(int osc, const PadParams& p, double sampleRate) {
+    if (osc < 0 || osc >= WT_DISPLAY_OSCS) return;
+    auto& b = gWtDispBox[WT_DISPLAY_OSCS + osc];
+    const uint64_t key = (uint64_t)padKey(p);   // 32-bit, so never WT_KEY_NONE
+    if (key == b.lastKey) return;
+    auto ps = getPadSetIfReady(p, sampleRate);
+    if (!ps || !ps->display) return;
+    const unsigned w = b.w.load(std::memory_order_relaxed);
+    const unsigned r = b.r.load(std::memory_order_acquire);
+    if (w - r >= WtDispBox::CAP) return;
+    b.slot[w % WtDispBox::CAP] = ps->display;
+    b.w.store(w + 1, std::memory_order_release);
+    b.lastKey = key;
+}
+
 // Live morph position. Separate from the frame mailbox because it is a different kind
 // of value: one float that changes every block rather than a block that changes rarely,
 // so there is nothing to queue — the newest simply replaces the old.
@@ -1392,21 +1417,21 @@ struct WtMorphBox {
     uint32_t lastSeq{0};      // render thread only
     int      idle{0};         // render thread only
 };
-std::array<WtMorphBox, WT_DISPLAY_OSCS> gWtMorph{};
+std::array<WtMorphBox, VA_DISPLAY_SLOTS> gWtMorph{};
 // ~8 frames of silence before the trace goes. Long enough that a block boundary or a
 // dropped frame never blinks it, short enough that it leaves with the note.
 constexpr int WT_MORPH_IDLE_FRAMES = 8;
 }
 
 void wtPublishMorph(int osc, float pos01) {
-    if (osc < 0 || osc >= WT_DISPLAY_OSCS) return;
+    if (osc < 0 || osc >= VA_DISPLAY_SLOTS) return;
     auto& b = gWtMorph[osc];
     b.pos.store(pos01 < 0.f ? 0.f : (pos01 > 1.f ? 1.f : pos01), std::memory_order_relaxed);
     b.seq.fetch_add(1, std::memory_order_release);
 }
 
 bool wtTakeMorph(int osc, float& pos01) {
-    if (osc < 0 || osc >= WT_DISPLAY_OSCS) return false;
+    if (osc < 0 || osc >= VA_DISPLAY_SLOTS) return false;
     auto& b = gWtMorph[osc];
     const uint32_t s = b.seq.load(std::memory_order_acquire);
     if (s == b.lastSeq) { if (b.idle < WT_MORPH_IDLE_FRAMES) ++b.idle; }
@@ -1435,7 +1460,7 @@ bool wtApplyRuntimeWarp(int warpType, float warpA, float warpB,
 }
 
 std::shared_ptr<const WtDisplayFrames> wtTakeDisplay(int osc) {
-    if (osc < 0 || osc >= WT_DISPLAY_OSCS) return nullptr;
+    if (osc < 0 || osc >= VA_DISPLAY_SLOTS) return nullptr;
     auto& b = gWtDispBox[osc];
     std::shared_ptr<const WtDisplayFrames> latest;
     unsigned r = b.r.load(std::memory_order_relaxed);
@@ -2143,6 +2168,54 @@ static std::shared_ptr<PadSet> padWarmFind(const PadParams& p) {
     return nullptr;
 }
 
+// The stack picture for the PAD page, extracted on the worker right after the
+// regions are built — the render thread never reads the big tables. Conventions
+// match the WT extraction (getWavetableDisplay / WavetableSet::display): slice k
+// sits at t = k/(SLICES-1) along the BAKED mA→mB span, its two adjacent levels
+// lerped exactly as padPrep does at runtime, sampled at cell centres and
+// peak-normalised per slice so quiet slices stay visible.
+//
+// The window is TWO fundamental periods of the middle-C region rather than the one
+// cycle a wavetable shows: a PADsynth table is a multi-second sample, not a cycle,
+// and two periods is what lets the smear read as period-to-period irregularity
+// instead of aliasing into a clean (and dishonest) single cycle.
+static std::shared_ptr<const WtDisplayFrames> padExtractDisplay(const PadSet& ps,
+                                                                double sampleRate) {
+    auto d = std::make_shared<WtDisplayFrames>();
+    const PadRegion& rg = ps.region[padRegionFor(261.63)];
+    if (rg.len <= 1 || rg.f0 <= 0.0) return d;             // n stays 0 → empty box
+    const double win = std::min(sampleRate / rg.f0 * 2.0, (double)rg.len);
+    constexpr int NP = WtDisplayFrames::POINTS;
+    d->n = WtDisplayFrames::SLICES;
+    for (int k = 0; k < WtDisplayFrames::SLICES; k++) {
+        const float t = (float)k / (WtDisplayFrames::SLICES - 1);
+        float mp = t * (PAD_MORPH_LEVELS - 1);
+        int m0 = (int)mp;
+        if (m0 > PAD_MORPH_LEVELS - 2) m0 = PAD_MORPH_LEVELS - 2;
+        const float mf = mp - (float)m0;
+        const float* la = rg.lvl[m0].data();
+        const float* lb = rg.lvl[m0 + 1].data();
+        float* out = d->f + (size_t)k * NP;
+        float mx = 1e-6f;
+        for (int i = 0; i < NP; i++) {
+            // Cell centres, same as getWavetableDisplay. pos < win <= len, and the
+            // levels carry a +1 guard sample, so idx+1 never reads past the end.
+            const double pos = ((double)i + 0.5) / NP * win;
+            const int    idx = (int)pos;
+            const float  fr  = (float)(pos - idx);
+            const float  sa  = la[idx] + (la[idx + 1] - la[idx]) * fr;
+            const float  sb  = lb[idx] + (lb[idx + 1] - lb[idx]) * fr;
+            const float  v   = sa + (sb - sa) * mf;
+            out[i] = v;
+            const float av = v < 0.f ? -v : v;
+            if (av > mx) mx = av;
+        }
+        const float g = 0.95f / mx;
+        for (int i = 0; i < NP; i++) out[i] *= g;
+    }
+    return d;
+}
+
 std::shared_ptr<PadSet> getPadSet(const PadParams& p, double sampleRate) {
     {
         std::lock_guard<std::mutex> lk(gPadMtx);
@@ -2152,6 +2225,7 @@ std::shared_ptr<PadSet> getPadSet(const PadParams& p, double sampleRate) {
     auto sp = std::make_shared<PadSet>();
     sp->params = p;
     for (int r = 0; r < PAD_REGIONS; r++) buildPadRegion(sp->region[r], p, r, sampleRate);  // heavy, outside the lock
+    sp->display = padExtractDisplay(*sp, sampleRate);      // cheap next to the build
     std::lock_guard<std::mutex> lk(gPadMtx);
     if (auto e = padWarmFind(p)) return e;   // lost a build race
     gPadWarm.push_front(sp);

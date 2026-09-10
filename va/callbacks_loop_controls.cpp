@@ -4,7 +4,7 @@
 
 #include <cstdint>
 #include <app.h>
-#include <SettingsView.h>
+#include <settings2.h>
 #ifndef __ANDROID__
 #include <OSCredentialStore.h>
 #endif
@@ -28,6 +28,12 @@
 #include "sequencer.h"
 
 bool applySpecialAction(tsl::AppState* _appState, int viewid) {
+
+    // Behind the session wall the UI is dead (the dialog owns all input), but a
+    // MIDI-mapped POWER or RECORD would still land here and could restart audio
+    // or open a recording into an ended session.
+    if (_DATA->sessionExpired.load() && (viewid == POWERButton || viewid == RECORDButton))
+        return true;
 
     switch (viewid) {
         case RECORDButton:
@@ -147,7 +153,7 @@ bool applySpecialAction(tsl::AppState* _appState, int viewid) {
             _STATE->UiTasksQueue.add_task([_appState]() {
                 auto sp = _STATE->settingsView.load();
                 if (sp != nullptr) {
-                    auto settings = std::static_pointer_cast<tsl::graphics::Settings>(sp);
+                    auto settings = std::static_pointer_cast<tsl::graphics::Settings2>(sp);
                     settings->hide();
                     settings->show();
                 } else {
@@ -157,6 +163,9 @@ bool applySpecialAction(tsl::AppState* _appState, int viewid) {
                 <Pref name="Audio Format" key="audio_format" type="dropdown" value="0" displayOptions="WAV 16bit,WAV 32bit,FLAC 16bit,FLAC 24bit,MP3 CBR 320 kbps" optionValues="0,12,10,11,8"/>
                 <Pref name="Ask for Filename on Finish" key="ask_name" type="bool" value="false"/>
                 <Pref name="HQ Resampling" key="hq_resampling" type="bool" value="false"/>
+            </PrefCategory>
+            <PrefCategory name="Presets">
+                <Pref name="Show Factory Presets" key="show_factory" type="bool" value="true" description="When off, LOAD PRESET shows only Default and your own presets."/>
             </PrefCategory>
             <PrefCategory name="Misc">
                 <Pref name="Delete saved credentials" description="You will need to sign in again on next start." type="action" key="credentials"/>
@@ -175,6 +184,21 @@ bool applySpecialAction(tsl::AppState* _appState, int viewid) {
                             _STATE->askName = value != 0;
                         else if (key == "hq_resampling")
                             _DATA->hqresampling.store(value != 0);
+                        else if (key == "show_factory") {
+                            _DATA->showFactoryPresets.store(value != 0);
+                            // The selector's list is only rebuilt in addRecursiveDraw,
+                            // and Settings2 draws over the main views without ever
+                            // removing/re-adding them — so without this the toggle
+                            // takes effect at the next space switch or restart, not
+                            // now. Same rebuild savePreset queues after a save.
+                            _appState->toUiThreadQueue.try_push([_appState]() {
+                                auto* sel = _DATA->views.presetSelector;
+                                if (sel && sel->visible_) {
+                                    sel->addRecursiveDraw();
+                                    sel->redraw();
+                                }
+                            });
+                        }
                     };
                     // This is the on-disk settings directory (Application Support/<name>
                     // on macOS, APPDATA\<name> on Windows) and it follows the rename,
@@ -187,18 +211,9 @@ bool applySpecialAction(tsl::AppState* _appState, int viewid) {
                     // through invokeSettings() and Java SharedPreferences), and its
                     // storage root comes from getExternalFilesDir, i.e. from the frozen
                     // applicationId. Nothing on Android is named after the product.
-                    auto settings = std::make_shared<tsl::graphics::Settings>(
+                    auto settings = std::make_shared<tsl::graphics::Settings2>(
                         _appState, tsl::app::appName, intChangeCallback);
                     settings->loadFromXml(xmlPrefs);
-
-                    // Apply persisted values to app state — SettingsManager only fires
-                    // intChangeCallback on Set(), not on initial load, so we read them here.
-                    {
-                        tsl::settings::SettingsManager savedPrefs(tsl::app::getStoragePath(tsl::app::appName));
-                        _STATE->format    = (uint8_t)savedPrefs.Get("audio_format", 0);
-                        _STATE->askName   = savedPrefs.Get("ask_name", false);
-                        _DATA->hqresampling.store(savedPrefs.Get("hq_resampling", false));
-                    }
 
                     settings->getByKey("credentials")->setAction([_appState]() {
                         tsl::OSCredentialStore store(tsl::app::lsName);

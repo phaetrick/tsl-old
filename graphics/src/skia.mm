@@ -74,7 +74,16 @@ void tsl::graphics::Graphics::init() {
 void tsl::graphics::Graphics::BeginFrame() {
 	if (grContext.get())
 	{
+		// nextDrawable returns nil when the layer is detached or the drawable
+		// pool is exhausted -- backgrounding hits both. Same contract as the GL
+		// path: a null backEndSurface is a dropped frame, not a crash, and
+		// EndFrame() must not present the previous frame's drawable again.
 		id<CAMetalDrawable> drawable = [(__bridge CAMetalLayer*)mMTLLayer nextDrawable];
+		if (drawable == nil) {
+			backEndSurface = nullptr;
+			mMTLDrawable = nullptr;
+			return;
+		}
 
 		int width = (int)drawable.texture.width;
 		int height = (int)drawable.texture.height;
@@ -83,6 +92,11 @@ void tsl::graphics::Graphics::BeginFrame() {
 		fbInfo.fTexture.retain((__bridge const void*)(drawable.texture));
 		auto backendRT = GrBackendRenderTargets::MakeMtl(width, height, fbInfo);
 		backEndSurface = SkSurfaces::WrapBackendRenderTarget(grContext.get(), backendRT, kTopLeft_GrSurfaceOrigin, kBGRA_8888_SkColorType, nullptr, nullptr);
+		if (!backEndSurface) {
+			NSLog(@"[TSL] Skia WrapBackendRenderTarget returned null - skipping frame");
+			mMTLDrawable = nullptr;
+			return;
+		}
 		backEndSurface->getCanvas()->clear(SK_ColorBLACK);
 
 		mMTLDrawable = (__bridge void*)drawable;
@@ -96,12 +110,22 @@ void tsl::graphics::Graphics::BeginFrame() {
 void tsl::graphics::Graphics::EndFrame() {
 	flush();
 
+	// BeginFrame() leaves both null when it dropped the frame (nil drawable or
+	// failed wrap) -- nothing was drawn and there is nothing to present.
+	if (backEndSurface == nullptr || mMTLDrawable == nullptr) {
+		backEndSurface = nullptr;
+		return;
+	}
+
 	id<MTLCommandBuffer> commandBuffer = [(__bridge id<MTLCommandQueue>) mMTLCommandQueue commandBuffer];
 	commandBuffer.label = @"Present";
 
 	[commandBuffer presentDrawable : (__bridge id<CAMetalDrawable>) mMTLDrawable] ;
 	[commandBuffer commit] ;
 
+	// A drawable must be presented exactly once; a later EndFrame() without a
+	// BeginFrame() in between must not see this one again.
+	mMTLDrawable = nullptr;
 	backEndSurface = nullptr;
 }
 

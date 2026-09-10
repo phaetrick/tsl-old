@@ -1859,11 +1859,26 @@ enum ParameterNum : uint16_t {
     CREVENVY3AARG,
     CREVENVY4AARG,
     CREVGAIN,
-    // NEW PARAMS GO HERE, immediately before NUM_PARAMETERS -- that is the
-    // marker presets persist up to, not NUM_PARAMS. Anything added past it is
-    // simply never saved. Inserting here shifts every id from NUM_PARAMETERS
-    // onwards, which is safe precisely because those ids are the ones no preset
-    // ever stored.
+    // NEW PARAMS GO IMMEDIATELY BEFORE NUM_PARAMS -- the END of the stored id
+    // space -- never anywhere else. (This paragraph used to say the opposite:
+    // insert here, because presets only persist up to NUM_PARAMETERS. That was
+    // true of the pre-22 formats, whose writers no longer exist.)
+    //
+    // The v22 format (July 2025, PresetHeader2023) serializes
+    // Snapshot::events_, which records ANY param whose value differs from its
+    // default -- BOTH sides of NUM_PARAMETERS -- keyed by raw enum id
+    // (Event::paramIndex, memcpy'd; same for projects and the DAW chunk).
+    // Proven empirically by tests/auhost scenario 15: ids past NUM_PARAMETERS
+    // round-trip through a real preset save/load.
+    //
+    // Consequence: there is NO safe insertion point below NUM_PARAMS.
+    // Inserting mid-enum shifts every id after the insertion, and saved
+    // presets/projects resolve their stored ids onto the WRONG params -- which
+    // silently happened to every id past this marker on every insertion made
+    // here since v22 shipped. Ids never move; append before NUM_PARAMS only.
+    // What keeps a param OUT of presets is not its position but its flags:
+    // Param::NoValue never enters events_, and the one-shot event types are
+    // history-only (see Snapshot::addEvent in History/history.cpp).
     //
     // PVAMPSSMOOTH2 replaces PVAMPSSMOOTH, and the two PDETECT ones replace
     // theirs: all three were the Tone cutoff in dB and so ran backwards, their

@@ -29,7 +29,7 @@ android {
         applicationId "me.rocks.pocketanalog"
         minSdkVersion 24
         targetSdkVersion 37
-        versionCode 13
+        versionCode 14
         versionName "1.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -95,10 +95,10 @@ android {
     externalNativeBuild {
         cmake {
             def isMac = System.getProperty('os.name').toLowerCase().contains('mac')
-            def grainstormOldRoot = isMac
-                    ? "${System.getProperty('user.home')}/programming/grainstorm-old"
-                    : "/home/pr/programming/grainstorm-old"
-            path file("${grainstormOldRoot}/va/CMakeLists.txt")
+            def tslOldRoot = isMac
+                    ? "${System.getProperty('user.home')}/programming/tsl-old"
+                    : "/home/pr/programming/tsl-old"
+            path file("${tslOldRoot}/va/CMakeLists.txt")
 
         }
     }

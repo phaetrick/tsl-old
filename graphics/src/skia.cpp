@@ -72,28 +72,10 @@ void tsl::graphics::window::resize(float x, float y, int w, int h) {
     }
 }
 
-SkCanvas *tsl::graphics::window::getCanvas() const {
-    return surface->getCanvas();
-};
-
 sk_sp<SkSurface> tsl::graphics::window::getSurface() const {
     return surface;
 };
 
-
-void tsl::graphics::Graphics::clear() {
-    // Teardown path: release here rather than deferring to a frame that may
-    // never come. Both callers are the render thread (Android surface loss and
-    // re-attach), so the context is either current or already gone.
-    std::vector<std::shared_ptr<window> > dead;
-    dead.swap(deadWindows);
-    for (auto &w: windows) dead.push_back(std::move(w));
-    windows.clear();
-    dead.clear();
-    rootSurface = nullptr;
-    backEndSurface = nullptr;
-    windowWidth = windowHeight = 0;
-}
 
 std::shared_ptr<tsl::graphics::window> tsl::graphics::Graphics::createWindow(
         float x, float y, int width, int height, bool isSystem) {
@@ -357,11 +339,20 @@ void tsl::graphics::Graphics::flush() {
 
 void tsl::graphics::Graphics::onViewDestroyed() {
     // Final teardown: nothing will drain the graveyard afterwards, so release
-    // it here while the context is still whole.
+    // it here while the context is still whole. Workers (decoder finish,
+    // recorder stop) can still close a popup while the desktop editor tears
+    // down, so the swap takes the same locks the live paths use; queue_draw is
+    // recursive, and the order queue_draw -> deadWindowsMutex matches
+    // dropFramebufferSurfaces().
     std::vector<std::shared_ptr<window> > dead;
-    dead.swap(deadWindows);
-    for (auto &w: windows) dead.push_back(std::move(w));
-    windows.clear();
+    {
+        std::lock_guard lk(_appState->queue_draw);
+        std::lock_guard dlk(deadWindowsMutex);
+        dead.swap(deadWindows);
+        for (auto &w: windows) dead.push_back(std::move(w));
+        windows.clear();
+    }
+    // Destroyed outside the locks -- ~SkSurface can be slow.
     dead.clear();
     rootSurface = nullptr;
     backEndSurface = nullptr;

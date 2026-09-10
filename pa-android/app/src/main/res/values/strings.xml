@@ -59,6 +59,12 @@
     <string name="synth_sender_text">Select Sender for Synth</string>
     <string name="error_port_busy">Selected port is in use or unavailable.</string>
     <string name="port_open_ok">Port opened OK.</string>
+    <!-- Live state of the exposed input port, shown under the source spinner. The
+         byte count is the part that answers "is anything actually arriving?" -->
+    <string name="midi_status_idle">Nothing connected — pick a source above</string>
+    <string name="midi_status_self_named">Connected to %1$s — %2$d MIDI bytes in</string>
+    <string name="midi_status_self">Connected — %1$d MIDI bytes in</string>
+    <string name="midi_status_external">Another app is connected — %1$d MIDI bytes in</string>
     <string name="ignoresecondnoteonevent">Ignore every second Note On event</string>
     <string name="writemic">Write Microphone Recording to disk</string>
     <string name="recordingformat">Recording Format</string>

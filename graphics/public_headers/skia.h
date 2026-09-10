@@ -52,8 +52,6 @@ namespace tsl::graphics {
         int heigth() { return surface.get() == nullptr ? 0 : surface->height(); }
 
 
-        SkCanvas *getCanvas() const;
-
         sk_sp<SkSurface> getSurface() const;
 
         tsl::AppState *_appState{};
@@ -115,16 +113,24 @@ namespace tsl::graphics {
         // along to drain the graveyard.
         void reset() {
             std::vector<std::shared_ptr<window> > dead;
-            dead.swap(deadWindows);
+            {
+                std::lock_guard lk(deadWindowsMutex);
+                dead.swap(deadWindows);
+            }
             for (auto &w: windows) dead.push_back(std::move(w));
             windows.clear();
+            // Both callers run after onViewDestroyed() has abandoned and
+            // nulled grContext, so normally this is a no-op. If it ever runs
+            // with a live context, abandoning first keeps the surface
+            // destruction below from issuing backend calls on a context that
+            // is not current on this thread.
+            if (grContext)
+                grContext->abandonContext();
             dead.clear();
             rootSurface = nullptr;
             backEndSurface = nullptr;
             grContext = nullptr;
         }
-
-        void clear();
 
         // What a background/foreground round trip actually needs.
         //
@@ -134,9 +140,10 @@ namespace tsl::graphics {
         // GrDirectContext, and APP_CMD_TERM_WINDOW destroys gEglSurface while
         // leaving gEglContext alive. They stay valid across the round trip.
         //
-        // clear() drops the popup deque as well, which is why open popups
-        // vanished on resume: a FloatingView is NOT perm, so it was reaped from
-        // queue_draw long ago and stays on screen purely because swapWindows()
+        // The since-deleted clear() dropped the popup deque as well, which is
+        // why open popups vanished on resume: a FloatingView is NOT perm, so
+        // it was reaped from queue_draw long ago and stays on screen purely
+        // because swapWindows()
         // composites its surface every frame. Destroy the surface and there is
         // nothing left to re-render it.
         //
