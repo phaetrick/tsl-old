@@ -29,7 +29,7 @@ android {
         applicationId "me.rocks.pocketanalog"
         minSdkVersion 24
         targetSdkVersion 37
-        versionCode 14
+        versionCode 16
         versionName "1.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -95,10 +95,13 @@ android {
     externalNativeBuild {
         cmake {
             def isMac = System.getProperty('os.name').toLowerCase().contains('mac')
-            def tslOldRoot = isMac
-                    ? "${System.getProperty('user.home')}/programming/tsl-old"
-                    : "/home/pr/programming/tsl-old"
-            path file("${tslOldRoot}/va/CMakeLists.txt")
+            // Voltaic's native side is va2 in CPP-New now (the shared toolkit,
+            // the NativeActivity host in tsl_app/platform/android_app.cpp);
+            // tsl-old/va is the retired tree.
+            def cppNewRoot = isMac
+                    ? "${System.getProperty('user.home')}/programming/CPP-New"
+                    : "/home/pr/programming/CPP-New"
+            path file("${cppNewRoot}/va2/CMakeLists.txt")
 
         }
     }

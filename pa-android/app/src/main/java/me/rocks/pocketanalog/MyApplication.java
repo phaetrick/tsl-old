@@ -105,6 +105,9 @@ public class MyApplication extends Application {
     // Trial gate verdict: 0 none/capped, 1 trial active, 2 expired. Pushed from
     // TrialGate once resolved, which may be after the UI is already up.
     native static void java_set_trial_state(int state);
+    // A folder row's truth changed (a picker returned, a preset move
+    // committed): the toolkit settings page re-reads its lines.
+    native static void java_settings_changed();
 
     //native static byte[] java_sig();
 

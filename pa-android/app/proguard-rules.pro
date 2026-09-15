@@ -59,6 +59,27 @@
     # notice never shows and the wall's UNLOCK button does nothing.
     static void invokeUpgrade();
     static boolean capNoticeSeen();
+    # The toolkit settings page's rows (va2/src/settings.cpp), by name.
+    static int getBufferIndex();
+    static void setBufferIndex(int);
+    static boolean aaudioAvailable();
+    static boolean getUseAAudio();
+    static void setUseAAudio(boolean);
+    static boolean getKeepScreenOn();
+    static void setKeepScreenOn(boolean);
+    static boolean getStartPoweredOn();
+    static void setStartPoweredOn(boolean);
+    static void chooseRecordingFolder();
+    static void choosePresetFolder();
+    static java.lang.String recordingFolderLabel();
+    static java.lang.String trialStatusSummary();
+    static boolean isUnlocked();
+    static boolean getShowNotification();
+    static void setShowNotification(boolean);
+    static void openMidiSettings();
+    static void releasePresetFolder();
+    static java.lang.String presetFolderLabel();
+    static boolean presetFolderIsCustom();
     # Preset-folder bridge, called from native only (va/preset.cpp).
     static boolean presetFolderIsCustom();
     static boolean presetFolderReachable();

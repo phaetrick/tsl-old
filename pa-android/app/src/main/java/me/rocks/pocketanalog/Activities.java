@@ -216,7 +216,7 @@ public class Activities {
                     }
                 }
             }
-            return rel.isEmpty() ? vol : vol + "/" + rel;
+            return rel.isEmpty() ? vol : vol + " > " + rel;   // "Internal storage > Music/Voltaic"
         } catch (Exception e) {
             return null;
         }

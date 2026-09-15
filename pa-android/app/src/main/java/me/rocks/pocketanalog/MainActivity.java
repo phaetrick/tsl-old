@@ -192,15 +192,20 @@ final static String TAG = "MainActivity";
         if (requestCode == PERMISSION_ALL) {
             for (int i = 0; i < permissions.length; i++) {
                 if (permissions[i].equals(Manifest.permission.POST_NOTIFICATIONS)) {
+                    // The switch that asked (setShowNotification) turns on only
+                    // now, on a grant -- the old page did the same -- and the
+                    // settings rows re-read it. A denial leaves it off.
+                    final boolean granted = grantResults.length > i
+                            && grantResults[i] == PackageManager.PERMISSION_GRANTED;
+                    MyApplication myApplication = MyApplication.getInstance();
+                    if (granted && myApplication != null)
+                        Activities.setDefaultsBoolean(getString(R.string.runAsForeGround), true, myApplication);
                     // Start the service regardless of the user's choice (Grant or Deny)
-                    // because "service should always start". 
+                    // because "service should always start".
                     // If granted, it will have a notification. If denied, it won't.
-                    if (synthIsOn) {
-                        MyApplication myApplication = MyApplication.getInstance();
-                        if (myApplication != null) {
-                            startSynthService(myApplication, new Intent(myApplication, SynthService.class));
-                        }
-                    }
+                    if (synthIsOn && myApplication != null)
+                        startSynthService(myApplication, new Intent(myApplication, SynthService.class));
+                    MyApplication.java_settings_changed();
                 }
             }
         }
@@ -286,6 +291,7 @@ final static String TAG = "MainActivity";
                     String output = "Output Folder set to: " + outdir;
                     showToast(output);
                 } else showToast("Output Folder changed.");
+                MyApplication.java_settings_changed();
             }
         } else if (requestCode == REQUEST_DIRECTORY_PRESET && resultCode == Activity.RESULT_OK) {
             ContentResolver contentResolver = getContentResolver();
@@ -936,6 +942,125 @@ final static String TAG = "MainActivity";
         return Activities.getDefaultsInt(getString(R.string.recordingformat), 0, this);
     }
 
+    // ---- THE TOOLKIT SETTINGS PAGE'S ANDROID ROWS (native: va2/src/settings.cpp).
+    // The old preference screen (MainSettings2) is retired; these are the
+    // statics its rows drove, so the same preference keys stay the truth
+    // MyApplication reads at start. Called from native by name --
+    // proguard-rules.pro keeps every one of them.
+    static int getBufferIndex() { return MyApplication.audioBufIndex; }
+    static void setBufferIndex(int idx) {
+        MyApplication app = MyApplication.getInstance();
+        if (app == null) return;
+        MyApplication.audioBufIndex = idx;
+        Activities.setDefaultsInt(app.getString(R.string.bufsize3), idx, app);
+    }
+    static boolean aaudioAvailable() { return Build.VERSION.SDK_INT >= 27; }
+    static boolean getUseAAudio() { return MyApplication.useAAudio; }
+    static void setUseAAudio(boolean on) {
+        MyApplication app = MyApplication.getInstance();
+        if (app == null) return;
+        MyApplication.useAAudio = on && aaudioAvailable();
+        Activities.setDefaultsBoolean(app.getString(R.string.useaaudio), on, app);
+    }
+    static boolean getKeepScreenOn() { return MyApplication.screenOn; }
+    static void setKeepScreenOn(final boolean on) {
+        final MainActivity a = getInstance();
+        MyApplication app = MyApplication.getInstance();
+        if (app == null) return;
+        MyApplication.screenOn = on;
+        Activities.setDefaultsBoolean(app.getString(R.string.screenonflag), on, app);
+        if (a != null) a.runOnUiThread(new Runnable() { public void run() { a.setScreenOnFlag(on); } });
+    }
+    // Settings > General > Power On at Start: the pref native setup reads
+    // (MyApplication.startPoweredOn) at the next launch.
+    static boolean getStartPoweredOn() { return MyApplication.startPoweredOn; }
+    static void setStartPoweredOn(final boolean on) {
+        MyApplication app = MyApplication.getInstance();
+        if (app == null) return;
+        MyApplication.startPoweredOn = on;
+        Activities.setDefaultsBoolean(app.getString(R.string.startPoweredOn), on, app);
+    }
+    static void chooseRecordingFolder() { pickTree(REQUEST_DIRECTORY_REC); }
+    static void choosePresetFolder()    { pickTree(REQUEST_DIRECTORY_PRESET); }
+    private static void pickTree(final int request) {
+        final MainActivity a = getInstance();
+        if (a == null) return;
+        a.runOnUiThread(new Runnable() { public void run() {
+            try {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+                intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+                intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                a.startActivityForResult(intent, request);
+            } catch (Exception e) {
+                showToast(e.toString());
+            }
+        }});
+    }
+    /** The recording folder as Files shows it, or "" while none is chosen. */
+    static String recordingFolderLabel() {
+        MainActivity a = getInstance();
+        if (a == null) return "";
+        String rec = Activities.getDefaultsString(a.getString(R.string.recordingdirectory), null, a);
+        if (rec == null) return "";
+        String where = Activities.describeTree(a, Uri.parse(rec));
+        return where != null ? where : "Your chosen folder";
+    }
+    /** The trial's line for the store row: "Trial - 9 days left", "Trial
+     *  ended", "" once the upgrade is owned -- what the old Upgrade row said. */
+    static String trialStatusSummary() {
+        MyApplication app = MyApplication.getInstance();
+        if (app == null || isOpen()) return "";
+        String s = TrialGate.statusSummary(app);
+        return s != null ? s : "";
+    }
+    static boolean isUnlocked() { return isOpen(); }
+
+    /** "Show Notification When Synth Is Playing". The service that carries the
+     *  notification is not optional (powerControl); what this row governs is
+     *  the POST_NOTIFICATIONS permission that makes it VISIBLE. On: ask for
+     *  the permission if it is missing (the grant re-posts the notification,
+     *  onRequestPermissionsResult), and remember the wish. Off: remember it. */
+    static boolean getShowNotification() {
+        MyApplication app = MyApplication.getInstance();
+        if (app == null) return false;
+        if (!Activities.getDefaultsBoolean(app.getString(R.string.runAsForeGround), false, app)) return false;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true;
+        return ActivityCompat.checkSelfPermission(app, Manifest.permission.POST_NOTIFICATIONS)
+               == PackageManager.PERMISSION_GRANTED;
+    }
+    static void setShowNotification(final boolean on) {
+        final MainActivity a = getInstance();
+        MyApplication app = MyApplication.getInstance();
+        if (app == null) return;
+        if (!on) {
+            Activities.setDefaultsBoolean(app.getString(R.string.runAsForeGround), false, app);
+            return;
+        }
+        if (a == null) return;
+        a.runOnUiThread(new Runnable() { public void run() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                    && ActivityCompat.checkSelfPermission(a, Manifest.permission.POST_NOTIFICATIONS)
+                       != PackageManager.PERMISSION_GRANTED) {
+                // Ask, and stay OFF until the grant lands (onRequestPermissionsResult
+                // stores the wish then); the rows read the truth back meanwhile.
+                ActivityCompat.requestPermissions(a,
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS}, PERMISSION_ALL);
+                MyApplication.java_settings_changed();
+            } else {
+                Activities.setDefaultsBoolean(a.getString(R.string.runAsForeGround), true, a);
+                refreshServiceNotification();
+                MyApplication.java_settings_changed();
+            }
+        }});
+    }
+
+    static void openMidiSettings() {
+        final MainActivity a = getInstance();
+        if (a == null) return;
+        a.runOnUiThread(new Runnable() { public void run() {
+            a.startActivity(new Intent(a, MidiActivity.class));
+        }});
+    }
     static void invokeSettings() {
         MainActivity pocketanalog = getInstance();
         if (pocketanalog != null) {
@@ -1244,6 +1369,7 @@ final static String TAG = "MainActivity";
                                          PENDING_APP.equals(target) ? null : target, a);
         Activities.setDefaultsStringSync(PENDING_KEY, null, a);
         MyApplication.java_reload_presets();
+        MyApplication.java_settings_changed();
 
         if (!announce) {
             if (moved > 0)
